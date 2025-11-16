@@ -1,0 +1,120 @@
+{
+  "categories": {
+    "pricing": {
+      "questions": [
+        {"q": "How much does a visit cost?", "a": "Our visits start at just $19. This affordable price includes a general health check-up where our caring team checks your vitals, answers your questions, and helps you feel your best."},
+        {"q": "What is the cost of services?", "a": "We offer quality care starting at $19 per visit. No insurance is required, making healthcare accessible to everyone."},
+        {"q": "Do I need insurance?", "a": "No insurance is needed! Our services start at just $19, making quality healthcare affordable for everyone."},
+        {"q": "Is the $19 visit really true?", "a": "Yes! We proudly offer quality care starting at just $19. No hidden fees, no insurance required. We believe healthcare should be accessible to all."},
+        {"q": "What does the $19 visit include?", "a": "The $19 visit includes a general health check-up with vital signs monitoring, health assessment, and consultation with our medical team."},
+        {"q": "Are there any hidden fees?", "a": "No hidden fees! Our transparent pricing starts at $19 for quality healthcare visits."},
+        {"q": "Can I afford your services?", "a": "Yes! We designed our services to be affordable for everyone, starting at just $19 with no insurance required."},
+        {"q": "¿Cuánto cuesta una visita?", "a": "Nuestras visitas comienzan en solo $19. Este precio asequible incluye un chequeo general de salud donde nuestro equipo verifica sus signos vitales, responde sus preguntas y le ayuda a sentirse mejor."},
+        {"q": "¿Necesito seguro?", "a": "¡No se necesita seguro! Nuestros servicios comienzan en solo $19, haciendo que la atención médica de calidad sea asequible para todos."}
+      ]
+    },
+    "locations": {
+      "questions": [
+        {"q": "Where are you located?", "a": "We have 17 clinics across Texas, including locations in Dallas, Houston, and San Antonio. Visit our website to find the clinic nearest to you."},
+        {"q": "How many locations do you have?", "a": "We have 17 convenient locations throughout Texas to serve you better."},
+        {"q": "Do you have a clinic near me?", "a": "With 17 locations across Texas in cities like Dallas, Houston, and San Antonio, we likely have a clinic near you. Check our website for the complete list."},
+        {"q": "What cities are you in?", "a": "We serve communities across Texas with clinics in Dallas, Houston, San Antonio, and 14 other locations."},
+        {"q": "Where is the nearest clinic?", "a": "We have 17 clinics across Texas. Please visit our website or tell us your city, and we'll help you find the nearest location."},
+        {"q": "How do I find your clinic?", "a": "Visit our website to use our clinic locator map. We have 17 convenient locations across Texas."},
+        {"q": "Are you in Dallas?", "a": "Yes! We have locations in Dallas and throughout Texas. Visit our website to find the Dallas clinic nearest to you."},
+        {"q": "Are you in Houston?", "a": "Yes! We serve Houston with multiple locations. Check our website for the Houston clinic nearest to you."},
+        {"q": "¿Dónde están ubicados?", "a": "Tenemos 17 clínicas en todo Texas, incluyendo ubicaciones en Dallas, Houston y San Antonio. Visite nuestro sitio web para encontrar la clínica más cercana a usted."}
+      ]
+    },
+    "services": {
+      "questions": [
+        {"q": "What services do you offer?", "a": "We offer comprehensive healthcare services including general health check-ups, preventive care, screenings, and routine medical visits. All services are designed to keep you and your family healthy at affordable prices starting at $19."},
+        {"q": "What can you help me with?", "a": "We provide quality healthcare services including general check-ups, health screenings, preventive care, and routine medical consultations. Our team is here to help you stay healthy."},
+        {"q": "Do you do check-ups?", "a": "Yes! General health check-ups are one of our core services, starting at just $19. Our team checks your vitals, answers questions, and helps you maintain good health."},
+        {"q": "What treatments are available?", "a": "We offer a wide range of treatments including general health check-ups, preventive care, health screenings, and routine medical services. Contact us for specific treatment availability."},
+        {"q": "Can you help with routine care?", "a": "Absolutely! Routine care is what we do best. From check-ups to screenings, we provide comprehensive care starting at $19."},
+        {"q": "Do you offer preventive care?", "a": "Yes! Preventive care is essential to staying healthy. We offer check-ups, screenings, and health consultations starting at $19."},
+        {"q": "What is a general check-up?", "a": "A general check-up includes vital signs monitoring, health assessment, and consultation with our medical team to help you stay healthy."},
+        {"q": "¿Qué servicios ofrecen?", "a": "Ofrecemos servicios integrales de atención médica que incluyen chequeos generales de salud, atención preventiva, exámenes y visitas médicas de rutina. Todos los servicios están diseñados para mantener a usted y su familia saludables a precios asequibles desde $19."}
+      ]
+    },
+    "appointments": {
+      "questions": [
+        {"q": "Do I need an appointment?", "a": "No appointment needed! We welcome walk-ins, making it easy to get care when you need it. However, you can schedule an appointment if you prefer."},
+        {"q": "Can I walk in?", "a": "Yes! We accept walk-ins. No appointment necessary, though scheduling ahead can help minimize wait times."},
+        {"q": "How do I schedule an appointment?", "a": "You can schedule by calling us, texting, or using our online chat. Walk-ins are also welcome!"},
+        {"q": "Do you take walk-ins?", "a": "Absolutely! Walk-ins are welcome at all our locations. No appointment needed."},
+        {"q": "What if I don't have an appointment?", "a": "No problem! We accept walk-ins at all our clinics. Come in whenever it's convenient for you."},
+        {"q": "Can I come in today?", "a": "Yes! Walk-ins are welcome. Visit any of our 17 locations for care today."},
+        {"q": "How do I book an appointment?", "a": "You can book by phone, text, or online chat. Walk-ins are also always welcome!"},
+        {"q": "¿Necesito una cita?", "a": "¡No se necesita cita! Aceptamos visitas sin cita previa, lo que facilita obtener atención cuando la necesita. Sin embargo, puede programar una cita si lo prefiere."}
+      ]
+    },
+    "hours": {
+      "questions": [
+        {"q": "What are your hours?", "a": "Our clinic hours vary by location. Most clinics are open Monday through Friday with extended hours, and some locations offer Saturday hours. Contact your nearest clinic for specific hours."},
+        {"q": "When are you open?", "a": "We're open throughout the week with convenient hours at all 17 locations. Hours vary by clinic, so please check with your nearest location."},
+        {"q": "Are you open on weekends?", "a": "Some of our locations offer Saturday hours. Please contact your nearest clinic to confirm weekend availability."},
+        {"q": "What time do you close?", "a": "Closing times vary by location. Most clinics have extended weekday hours to serve you better. Contact your nearest clinic for specific hours."},
+        {"q": "Are you open today?", "a": "Most of our clinics are open Monday through Friday, with some Saturday hours available. Contact your nearest location to confirm today's hours."},
+        {"q": "Are you open on Saturday?", "a": "Some locations offer Saturday hours. Contact your nearest clinic to confirm weekend availability."},
+        {"q": "What time do you open?", "a": "Opening times vary by location. Most clinics open early to serve you. Contact your nearest clinic for specific hours."},
+        {"q": "¿Cuáles son sus horarios?", "a": "Nuestros horarios de clínica varían según la ubicación. La mayoría de las clínicas están abiertas de lunes a viernes con horarios extendidos, y algunas ubicaciones ofrecen horarios los sábados. Contacte su clínica más cercana para horarios específicos."}
+      ]
+    },
+    "insurance": {
+      "questions": [
+        {"q": "Do you accept insurance?", "a": "Insurance is not required! Our affordable $19 visits make quality healthcare accessible without insurance. We focus on providing affordable care to everyone."},
+        {"q": "What insurance do you take?", "a": "No insurance is needed for our services. We offer affordable care starting at $19, making healthcare accessible to all."},
+        {"q": "I don't have insurance, can I still come?", "a": "Absolutely! No insurance is required. Our mission is to make healthcare accessible with affordable $19 visits."},
+        {"q": "Can I use my insurance?", "a": "Our services are designed to be affordable without insurance, starting at $19. This ensures everyone has access to quality care."},
+        {"q": "¿Aceptan seguro?", "a": "¡No se requiere seguro! Nuestras visitas asequibles de $19 hacen que la atención médica de calidad sea accesible sin seguro. Nos enfocamos en proporcionar atención asequible para todos."}
+      ]
+    },
+    "language": {
+      "questions": [
+        {"q": "Do you speak Spanish?", "a": "¡Sí! Our bilingual team speaks both English and Spanish. We're here to serve you in your preferred language."},
+        {"q": "Is there Spanish-speaking staff?", "a": "Yes! We have bilingual staff who speak both English and Spanish to serve our community better."},
+        {"q": "Can I get help in Spanish?", "a": "¡Por supuesto! Our team is bilingual and ready to help you in Spanish or English."},
+        {"q": "¿Hablan español?", "a": "¡Sí! Nuestro equipo bilingüe habla español e inglés. Estamos aquí para servirle en su idioma preferido."},
+        {"q": "What languages do you speak?", "a": "We're a bilingual clinic serving our community in both English and Spanish."}
+      ]
+    },
+    "newPatient": {
+      "questions": [
+        {"q": "I'm a new patient, what do I need?", "a": "Welcome! For your first visit, please bring a valid ID and any relevant medical information. No insurance is required, and our visits start at just $19."},
+        {"q": "What do I bring for my first visit?", "a": "Please bring a valid ID and any medical records or medications you're currently taking. No insurance needed!"},
+        {"q": "How do I register as a new patient?", "a": "Simply walk in to any of our 17 locations or call ahead. We'll help you register quickly and get you the care you need."},
+        {"q": "Can I come in as a new patient today?", "a": "Absolutely! Walk-ins are welcome. Bring your ID and we'll get you registered and seen by our caring team."},
+        {"q": "Soy un paciente nuevo, ¿qué necesito?", "a": "¡Bienvenido! Para su primera visita, por favor traiga una identificación válida y cualquier información médica relevante. No se requiere seguro, y nuestras visitas comienzan en solo $19."}
+      ]
+    },
+    "children": {
+      "questions": [
+        {"q": "Do you see children?", "a": "Yes! We provide care for the whole family, including children. Our compassionate team is here to help keep your family healthy."},
+        {"q": "Can I bring my kids?", "a": "Absolutely! We welcome patients of all ages and provide family-friendly care starting at $19."},
+        {"q": "Do you have pediatric services?", "a": "Yes, we provide care for children and families. Our team is experienced in treating patients of all ages."},
+        {"q": "Is it family-friendly?", "a": "Yes! We're proud to serve families and provide compassionate care for all ages, starting at just $19 per visit."},
+        {"q": "¿Atienden a niños?", "a": "¡Sí! Brindamos atención para toda la familia, incluidos los niños. Nuestro equipo compasivo está aquí para ayudar a mantener saludable a su familia."}
+      ]
+    },
+    "contact": {
+      "questions": [
+        {"q": "How do I contact you?", "a": "You can reach us by phone, text, or through our online chat. Visit our website for contact information for your nearest clinic."},
+        {"q": "What's your phone number?", "a": "Each of our 17 locations has its own phone number. Visit our website to find contact information for your nearest clinic."},
+        {"q": "Can I text you?", "a": "Yes! We accept text messages. Contact your nearest clinic for their specific contact information."},
+        {"q": "How do I reach you?", "a": "You can reach us by phone, text, online chat, or email. Visit our website for your nearest clinic's contact details."},
+        {"q": "¿Cómo los contacto?", "a": "Puede comunicarse con nosotros por teléfono, mensaje de texto o a través de nuestro chat en línea. Visite nuestro sitio web para obtener información de contacto de su clínica más cercana."}
+      ]
+    },
+    "mission": {
+      "questions": [
+        {"q": "What is your mission?", "a": "We believe everyone deserves quality care. Our mission is to provide affordable, compassionate healthcare starting at just $19—no insurance needed. We make health a right, not a privilege."},
+        {"q": "Why do you exist?", "a": "We exist to make quality healthcare accessible to everyone, especially underserved communities. Starting at $19 with no insurance required, we believe health is a right."},
+        {"q": "Who do you serve?", "a": "We proudly serve Texas communities, especially the Hispanic population, providing affordable healthcare starting at $19. Everyone deserves quality care."},
+        {"q": "What makes you special?", "a": "We make healthcare accessible with $19 visits, no insurance required, bilingual staff, and 17 convenient locations. We believe quality care should be available to everyone."},
+        {"q": "¿Cuál es su misión?", "a": "Creemos que todos merecen atención de calidad. Nuestra misión es proporcionar atención médica asequible y compasiva desde solo $19, sin necesidad de seguro. Hacemos de la salud un derecho, no un privilegio."}
+      ]
+    }
+  }
+}

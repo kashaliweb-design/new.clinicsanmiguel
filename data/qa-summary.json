@@ -1,0 +1,16 @@
+{
+  "total": 200000,
+  "byCategory": {
+    "pricing": 42915,
+    "locations": 29210,
+    "services": 28860,
+    "appointments": 28170,
+    "hours": 28110,
+    "language": 28734,
+    "mission": 14001
+  },
+  "byLanguage": {
+    "en": 185705,
+    "es": 14295
+  }
+}

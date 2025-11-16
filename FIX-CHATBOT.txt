@@ -1,0 +1,49 @@
+╔══════════════════════════════════════════════════════════════╗
+║          🔧 FIX CHATBOT ERROR - QUICK GUIDE                  ║
+╚══════════════════════════════════════════════════════════════╝
+
+❌ PROBLEM: Chatbot shows "Sorry, I encountered an error"
+
+✅ SOLUTION: Add OpenAI API Key (3 Steps)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1: Open File
+─────────────────
+Open this file in your editor:
+📁 c:\Users\DELL\Desktop\pdate agent\.env.local
+
+STEP 2: Add This Line
+─────────────────────
+Copy and paste this EXACT line into the file:
+
+OPENAI_API_KEY=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
+
+STEP 3: Restart Server
+──────────────────────
+In terminal:
+1. Press Ctrl+C (stop server)
+2. Run: npm run dev
+3. Wait for "ready started server"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 TEST IT:
+1. Go to: http://localhost:3000
+2. Click chat button (bottom right)
+3. Type: "hello"
+4. Should work! ✅
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 NOTES:
+• Make sure to SAVE the .env.local file
+• Make sure to RESTART the server
+• No spaces before or after the line
+• Copy the ENTIRE key (it's very long)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Need more help? Check: setup-openai.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
