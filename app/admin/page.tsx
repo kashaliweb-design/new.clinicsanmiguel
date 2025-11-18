@@ -20,6 +20,7 @@ export default function AdminDashboard() {
   });
   const [recentInteractions, setRecentInteractions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -27,6 +28,9 @@ export default function AdminDashboard() {
 
   const loadDashboardData = async () => {
     try {
+      setError(null);
+      console.log('Loading dashboard data...');
+      
       // Get stats
       const [interactions, appointments, patients, todayInteractions] = await Promise.all([
         supabase.from('interactions').select('id', { count: 'exact', head: true }),
@@ -38,6 +42,13 @@ export default function AdminDashboard() {
           .gte('created_at', new Date().toISOString().split('T')[0]),
       ]);
 
+      console.log('Stats loaded:', {
+        interactions: interactions.count,
+        appointments: appointments.count,
+        patients: patients.count,
+        today: todayInteractions.count
+      });
+
       setStats({
         totalInteractions: interactions.count || 0,
         totalAppointments: appointments.count || 0,
@@ -46,15 +57,22 @@ export default function AdminDashboard() {
       });
 
       // Get recent interactions
-      const { data: recent } = await supabase
+      const { data: recent, error: interactionsError } = await supabase
         .from('interactions')
         .select('*, patients(first_name, last_name, phone, date_of_birth)')
         .order('created_at', { ascending: false })
         .limit(10);
 
-      setRecentInteractions(recent || []);
-    } catch (error) {
+      if (interactionsError) {
+        console.error('Error fetching interactions:', interactionsError);
+        setError(`Failed to load interactions: ${interactionsError.message}`);
+      } else {
+        console.log('Recent interactions loaded:', recent?.length || 0);
+        setRecentInteractions(recent || []);
+      }
+    } catch (error: any) {
       console.error('Error loading dashboard:', error);
+      setError(error.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -133,43 +151,85 @@ export default function AdminDashboard() {
           </div>
         </div>
 
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <div className="text-red-600 text-xl">⚠️</div>
+              <div className="flex-1">
+                <h4 className="font-medium text-red-900 mb-1">Error Loading Data</h4>
+                <p className="text-sm text-red-800">{error}</p>
+                <button
+                  onClick={loadDashboardData}
+                  className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Recent Interactions */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">Recent Interactions</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {recentInteractions.length > 0 
+                ? `Showing ${recentInteractions.length} most recent interactions`
+                : 'No interactions yet'}
+            </p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Time
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Phone
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Age
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Channel
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Direction
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Message
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Intent
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {recentInteractions.map((interaction) => {
+          
+          {recentInteractions.length === 0 ? (
+            <div className="p-12 text-center">
+              <MessageSquare className="mx-auto text-gray-300 mb-4" size={64} />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Interactions Yet</h3>
+              <p className="text-gray-500 mb-4">
+                Interactions will appear here when patients contact via SMS, Voice, or Web Chat
+              </p>
+              <div className="text-sm text-gray-400">
+                <p>To test, try:</p>
+                <ul className="mt-2 space-y-1">
+                  <li>• Send an SMS to your Telnyx number</li>
+                  <li>• Make a voice call using Vapi</li>
+                  <li>• Use the web chat on your site</li>
+                </ul>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Time
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Patient Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Phone
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Age
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Channel
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Direction
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Message
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Intent
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {recentInteractions.map((interaction) => {
                   const calculateAge = (dob: string) => {
                     if (!dob) return 'N/A';
                     const birthDate = new Date(dob);
@@ -240,9 +300,10 @@ export default function AdminDashboard() {
                   </tr>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>
