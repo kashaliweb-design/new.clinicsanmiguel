@@ -4,30 +4,36 @@ import { supabase } from '@/lib/supabase';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { type, call, message, transcript } = body;
-
-    console.log('Vapi webhook received:', type);
+    console.log('Vapi webhook received:', JSON.stringify(body, null, 2));
+    
+    // Vapi sends different event structures
+    const eventType = body.type || body.message?.type;
+    const messageType = body.message?.type;
+    
+    console.log('Event type:', eventType, 'Message type:', messageType);
 
     // Handle different Vapi events
-    switch (type) {
-      case 'call-start':
-        await handleCallStart(call);
-        break;
-      
-      case 'transcript':
-        await handleTranscript(call, transcript);
-        break;
-      
-      case 'call-end':
-        await handleCallEnd(call);
-        break;
-      
-      case 'message':
-        await handleMessage(call, message);
-        break;
-      
-      default:
-        console.log('Unhandled Vapi event type:', type);
+    if (eventType === 'end-of-call-report' || messageType === 'end-of-call-report') {
+      await handleCallEnd(body);
+    } else if (eventType === 'status-update' || messageType === 'status-update') {
+      if (body.message?.status === 'started') {
+        await handleCallStart(body);
+      }
+    } else if (eventType === 'conversation-update' || messageType === 'conversation-update') {
+      await handleConversationUpdate(body);
+    } else if (eventType === 'speech-update' || messageType === 'speech-update') {
+      await handleSpeechUpdate(body);
+    } else if (eventType === 'transcript' || messageType === 'transcript') {
+      await handleTranscript(body.call, body.transcript || body.message);
+    } else if (eventType === 'function-call' || messageType === 'function-call') {
+      console.log('Function call received:', body);
+    } else {
+      // Log all unhandled events for debugging
+      console.log('Unhandled Vapi event:', {
+        eventType,
+        messageType,
+        fullBody: body
+      });
     }
 
     return NextResponse.json({ 
@@ -43,30 +49,126 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleCallStart(call: any) {
-  const { id, phoneNumber, customer } = call;
+async function handleCallStart(data: any) {
+  const { call, message } = data;
+  const callData = call || message?.call;
+  const callId = callData?.id;
+  const phoneNumber = callData?.customer?.number || callData?.phoneNumber;
 
-  console.log('Vapi call started:', { id, phoneNumber });
+  console.log('Vapi call started:', { callId, phoneNumber });
 
-  // Log the interaction in database
   try {
+    // Try to find or create patient if phone number exists
+    let patientId = null;
+    if (phoneNumber && phoneNumber !== 'unknown') {
+      const { data: existingPatient } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('phone', phoneNumber)
+        .single();
+
+      if (existingPatient) {
+        patientId = existingPatient.id;
+      } else {
+        // Create new patient record
+        const { data: newPatient } = await supabase
+          .from('patients')
+          .insert({
+            first_name: 'Voice',
+            last_name: 'Caller',
+            phone: phoneNumber,
+            preferred_language: 'en',
+            consent_voice: true,
+          })
+          .select()
+          .single();
+        
+        if (newPatient) {
+          patientId = newPatient.id;
+          console.log('Created new patient:', patientId);
+        }
+      }
+    }
+
     await supabase.from('interactions').insert({
-      session_id: id, // Use call ID as session ID
+      session_id: callId,
+      patient_id: patientId,
       channel: 'voice',
       direction: 'inbound',
-      from_number: customer?.number || phoneNumber || 'unknown',
-      to_number: phoneNumber || 'clinic',
+      from_number: phoneNumber || 'Web Caller',
+      to_number: 'clinic',
       message_body: 'Voice call started via Vapi',
       intent: 'voice_call',
       metadata: {
-        call_id: id,
+        call_id: callId,
         event: 'call-start',
         timestamp: new Date().toISOString(),
-        customer: customer,
       },
     });
   } catch (error) {
     console.error('Error logging call start:', error);
+  }
+}
+
+async function handleSpeechUpdate(data: any) {
+  const { message } = data;
+  const callId = message?.call?.id;
+  const transcript = message?.transcript || message?.speech;
+
+  if (!transcript) return;
+
+  console.log('Speech update:', transcript);
+
+  try {
+    await supabase.from('interactions').insert({
+      session_id: callId,
+      channel: 'voice',
+      direction: message?.role === 'user' ? 'inbound' : 'outbound',
+      from_number: message?.role === 'user' ? 'Web Caller' : 'AI Assistant',
+      to_number: message?.role === 'user' ? 'clinic' : 'Web Caller',
+      message_body: transcript,
+      intent: extractIntent(transcript),
+      metadata: {
+        call_id: callId,
+        event: 'speech-update',
+        role: message?.role,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error('Error logging speech:', error);
+  }
+}
+
+async function handleConversationUpdate(data: any) {
+  const { message } = data;
+  const callId = message?.call?.id;
+  const conversation = message?.conversation || [];
+
+  console.log('Conversation update:', conversation.length, 'messages');
+
+  // Log the last message in conversation
+  if (conversation.length > 0) {
+    const lastMessage = conversation[conversation.length - 1];
+    
+    try {
+      await supabase.from('interactions').insert({
+        session_id: callId,
+        channel: 'voice',
+        direction: lastMessage?.role === 'user' ? 'inbound' : 'outbound',
+        from_number: lastMessage?.role === 'user' ? 'Web Caller' : 'AI Assistant',
+        to_number: lastMessage?.role === 'user' ? 'clinic' : 'Web Caller',
+        message_body: lastMessage?.content || lastMessage?.message,
+        intent: extractIntent(lastMessage?.content || lastMessage?.message),
+        metadata: {
+          call_id: callId,
+          event: 'conversation-update',
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error('Error logging conversation:', error);
+    }
   }
 }
 
@@ -126,27 +228,67 @@ async function handleMessage(call: any, message: any) {
   }
 }
 
-async function handleCallEnd(call: any) {
-  const { id, phoneNumber, customer, endedReason, duration } = call;
+async function handleCallEnd(data: any) {
+  const { message, call } = data;
+  const callData = call || message?.call || message;
+  const callId = callData?.id;
+  const phoneNumber = callData?.customer?.number || callData?.phoneNumber || callData?.phoneNumberId;
+  const endedReason = message?.endedReason || callData?.endedReason;
+  const duration = message?.duration || callData?.duration;
+  const summary = message?.summary || callData?.summary;
 
-  console.log('Vapi call ended:', { id, duration, endedReason });
+  console.log('Vapi call ended:', { callId, phoneNumber, duration, endedReason });
 
-  // Log call end
   try {
+    // Try to find or create patient
+    let patientId = null;
+    if (phoneNumber && phoneNumber !== 'unknown') {
+      const { data: existingPatient } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('phone', phoneNumber)
+        .single();
+
+      if (existingPatient) {
+        patientId = existingPatient.id;
+      } else {
+        // Create new patient
+        const { data: newPatient } = await supabase
+          .from('patients')
+          .insert({
+            first_name: 'Voice',
+            last_name: 'Caller',
+            phone: phoneNumber,
+            preferred_language: 'en',
+            consent_voice: true,
+          })
+          .select()
+          .single();
+        
+        if (newPatient) {
+          patientId = newPatient.id;
+          console.log('Created new patient from call end:', patientId);
+        }
+      }
+    }
+
     await supabase.from('interactions').insert({
-      session_id: id, // Use call ID as session ID
+      session_id: callId,
+      patient_id: patientId,
       channel: 'voice',
       direction: 'inbound',
-      from_number: customer?.number || phoneNumber || 'unknown',
-      to_number: phoneNumber || 'clinic',
-      message_body: `Voice call ended: ${endedReason || 'completed'}`,
+      from_number: phoneNumber || 'Web Caller',
+      to_number: 'clinic',
+      message_body: summary || `Voice call ended: ${endedReason || 'completed'}. Duration: ${duration}s`,
       intent: 'call_ended',
       metadata: {
-        call_id: id,
-        event: 'call-end',
+        call_id: callId,
+        event: 'end-of-call-report',
         ended_reason: endedReason,
         duration_seconds: duration,
+        summary: summary,
         timestamp: new Date().toISOString(),
+        full_data: data,
       },
     });
   } catch (error) {

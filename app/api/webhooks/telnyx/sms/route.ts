@@ -33,12 +33,31 @@ export async function POST(request: NextRequest) {
     const sanitizedMessage = sanitizeInput(text);
     const sessionId = generateSessionId();
 
-    // Find patient by phone
-    const { data: patient } = await supabase
+    // Find or create patient by phone
+    let { data: patient } = await supabase
       .from('patients')
       .select('*')
       .eq('phone', from)
       .single();
+
+    // If patient doesn't exist, create new patient
+    if (!patient) {
+      console.log('Creating new patient from SMS:', from);
+      const { data: newPatient } = await supabase
+        .from('patients')
+        .insert({
+          first_name: 'SMS',
+          last_name: 'Patient',
+          phone: from,
+          preferred_language: 'en',
+          consent_sms: true, // Auto-consent since they're texting us
+        })
+        .select()
+        .single();
+      
+      patient = newPatient;
+      console.log('New patient created:', patient?.id);
+    }
 
     // Check SMS consent
     if (patient && !patient.consent_sms) {

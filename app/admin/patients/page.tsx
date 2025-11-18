@@ -20,6 +20,7 @@ interface Patient {
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [languageFilter, setLanguageFilter] = useState<'all' | 'en' | 'es'>('all');
 
@@ -29,15 +30,23 @@ export default function PatientsPage() {
 
   const loadPatients = async () => {
     try {
-      const { data, error } = await supabase
+      setError(null);
+      const { data, error: supabaseError } = await supabase
         .from('patients')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (supabaseError) {
+        console.error('Supabase error:', supabaseError);
+        setError(`Database error: ${supabaseError.message}`);
+        throw supabaseError;
+      }
+      
+      console.log('Loaded patients:', data?.length || 0);
       setPatients(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading patients:', error);
+      setError(error.message || 'Failed to load patients');
     } finally {
       setLoading(false);
     }
@@ -49,7 +58,7 @@ export default function PatientsPage() {
       patient.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       patient.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       patient.phone.includes(searchQuery) ||
-      patient.email.toLowerCase().includes(searchQuery.toLowerCase());
+      (patient.email && patient.email.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesLanguage =
       languageFilter === 'all' || patient.preferred_language === languageFilter;
@@ -58,6 +67,7 @@ export default function PatientsPage() {
   });
 
   const calculateAge = (dob: string) => {
+    if (!dob) return 'N/A';
     const birthDate = new Date(dob);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -188,6 +198,25 @@ export default function PatientsPage() {
           </div>
         </div>
 
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <div className="text-red-600">⚠️</div>
+              <div>
+                <h4 className="font-medium text-red-900 mb-1">Error Loading Patients</h4>
+                <p className="text-sm text-red-800">{error}</p>
+                <button
+                  onClick={loadPatients}
+                  className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Patients List */}
         <div className="bg-white rounded-lg shadow-sm">
           {loading ? (
@@ -258,22 +287,28 @@ export default function PatientsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {calculateAge(patient.date_of_birth)} years
+                          {patient.date_of_birth ? `${calculateAge(patient.date_of_birth)} years` : 'N/A'}
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {formatDate(patient.date_of_birth)}
-                        </div>
+                        {patient.date_of_birth && (
+                          <div className="text-xs text-gray-500">
+                            {formatDate(patient.date_of_birth)}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            patient.preferred_language === 'en'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-green-100 text-green-800'
-                          }`}
-                        >
-                          {patient.preferred_language === 'en' ? 'English' : 'Spanish'}
-                        </span>
+                        {patient.preferred_language ? (
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              patient.preferred_language === 'en'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}
+                          >
+                            {patient.preferred_language === 'en' ? 'English' : 'Spanish'}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-400">Not set</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col gap-1">
