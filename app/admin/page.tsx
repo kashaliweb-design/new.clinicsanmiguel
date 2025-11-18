@@ -48,7 +48,7 @@ export default function AdminDashboard() {
       // Get recent interactions
       const { data: recent } = await supabase
         .from('interactions')
-        .select('*, patients(first_name, last_name)')
+        .select('*, patients(first_name, last_name, phone, date_of_birth)')
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -146,7 +146,13 @@ export default function AdminDashboard() {
                     Time
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient
+                    Patient Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Phone
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Age
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Channel
@@ -163,7 +169,20 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {recentInteractions.map((interaction) => (
+                {recentInteractions.map((interaction) => {
+                  const calculateAge = (dob: string) => {
+                    if (!dob) return 'N/A';
+                    const birthDate = new Date(dob);
+                    const today = new Date();
+                    let age = today.getFullYear() - birthDate.getFullYear();
+                    const monthDiff = today.getMonth() - birthDate.getMonth();
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                      age--;
+                    }
+                    return age;
+                  };
+
+                  return (
                   <tr key={interaction.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(interaction.created_at).toLocaleString()}
@@ -172,6 +191,14 @@ export default function AdminDashboard() {
                       {interaction.patients
                         ? `${interaction.patients.first_name} ${interaction.patients.last_name}`
                         : 'Anonymous'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {interaction.patients?.phone || interaction.from_number || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {interaction.patients?.date_of_birth 
+                        ? `${calculateAge(interaction.patients.date_of_birth)} yrs`
+                        : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -211,7 +238,8 @@ export default function AdminDashboard() {
                       {interaction.intent || '-'}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

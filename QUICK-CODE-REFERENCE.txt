@@ -1,0 +1,264 @@
+╔════════════════════════════════════════════════════════════════╗
+║           PROJECT CODE FLOW - QUICK REFERENCE                  ║
+║              SanMiguel Connect AI System                       ║
+╚════════════════════════════════════════════════════════════════╝
+
+📁 PROJECT STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+app/
+├── page.tsx                    # Homepage (/)
+├── layout.tsx                  # Root layout
+├── admin/                      # Admin dashboard
+│   ├── page.tsx               # Dashboard home
+│   ├── patients/              # Patient management
+│   ├── appointments/          # Appointments
+│   └── interactions/          # Logs
+└── api/                        # Backend APIs
+    ├── appointments/          # Appointment APIs
+    ├── clinics/               # Clinic info
+    ├── faqs/                  # FAQ search
+    └── webhooks/              # External webhooks
+        ├── vapi/              # Voice webhooks
+        └── telnyx/            # SMS/Voice webhooks
+
+components/
+└── VapiVoiceCall.tsx          # Voice call button
+
+lib/
+├── supabase.ts                # Database client
+├── openai.ts                  # AI integration
+├── telnyx.ts                  # SMS/Voice
+└── utils.ts                   # Helpers
+
+
+🚀 APPLICATION START FLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+User opens browser → http://localhost:3000
+    ↓
+app/layout.tsx loads (Root wrapper)
+    ↓
+app/page.tsx renders (Homepage)
+    ↓
+Shows:
+- Hero section "SanMiguel Connect AI"
+- "Start Chat" button
+- "Call Us" button (VapiVoiceCall)
+- Features cards
+- Clinic locations
+- Footer
+
+
+📞 VOICE CALL FLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. User clicks "Call Us"
+2. VapiVoiceCall.tsx → vapi.start(assistantId)
+3. Browser asks microphone permission
+4. Call connects to Vapi server
+5. AI speaks: "Hello! How can I help?"
+6. User speaks: "What are your hours?"
+7. Vapi processes & responds
+8. Vapi sends webhook → POST /api/webhooks/vapi
+9. Server logs:
+   - INSERT INTO call_logs
+   - INSERT INTO interactions
+10. Call ends
+11. Final webhook updates database
+
+
+💬 SMS FLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. User sends SMS: "What are your hours?"
+2. Telnyx receives SMS
+3. Telnyx → POST /api/webhooks/telnyx/sms
+4. Find patient: SELECT * FROM patients WHERE phone = '...'
+5. Log incoming: INSERT INTO interactions (direction='inbound')
+6. AI processes message
+7. Generate response: "We're open Mon-Fri 9AM-5PM"
+8. Send SMS via Telnyx API
+9. Log outgoing: INSERT INTO interactions (direction='outbound')
+10. User receives SMS
+
+
+📊 ADMIN DASHBOARD FLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Admin opens /admin
+2. app/admin/page.tsx loads
+3. useEffect() → loadDashboardData()
+4. Parallel queries:
+   - Count interactions
+   - Count appointments
+   - Count patients
+   - Count today's activity
+5. Get recent interactions (last 10)
+6. Update state → setStats(), setRecentInteractions()
+7. React re-renders
+8. Shows:
+   - 4 stat cards
+   - Recent interactions table
+
+
+🗄️ DATABASE TABLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. clinics           - Clinic information
+2. patients          - Patient records
+3. appointments      - Appointment bookings
+4. interactions      - All communications log
+5. faqs              - Questions & answers
+6. canned_responses  - Pre-written responses
+7. call_logs         - Voice call details
+8. audit_logs        - System audit trail
+
+
+🔌 API ENDPOINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PUBLIC APIs:
+GET  /api/clinics              - Get clinic info
+GET  /api/faqs?q=hours         - Search FAQs
+POST /api/appointments/find    - Find appointment
+POST /api/appointments/confirm - Confirm appointment
+
+WEBHOOK APIs:
+POST /api/webhooks/vapi              - Voice call events
+POST /api/webhooks/telnyx/sms        - SMS messages
+POST /api/webhooks/telnyx/voice      - Voice call events
+
+
+📊 DATA FLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+User → Frontend → API Route → Business Logic → Database → Response
+
+
+DETAILED:
+┌─────────────┐
+│    USER     │ (Website/SMS/Voice/Admin)
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  NEXT.JS    │ (API Routes)
+│   APIs      │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  BUSINESS   │ (Patient Mgmt, AI Processing)
+│   LOGIC     │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  SUPABASE   │ (PostgreSQL Database)
+│  DATABASE   │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  EXTERNAL   │ (Vapi, Telnyx, OpenAI)
+│  SERVICES   │
+└─────────────┘
+
+
+🎯 COMPLETE EXAMPLE: SMS APPOINTMENT BOOKING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1: User sends "I need an appointment"
+Step 2: Telnyx → POST /api/webhooks/telnyx/sms
+Step 3: Check patient exists
+Step 4: Create patient if new
+Step 5: Log incoming message
+Step 6: AI processes: "User wants appointment"
+Step 7: Generate: "Sure! What date works?"
+Step 8: Send SMS via Telnyx
+Step 9: Log outgoing message
+Step 10: User receives response
+Step 11: User replies: "Tomorrow 2pm"
+Step 12: Create appointment in database
+Step 13: Send confirmation: "Booked! Code: ABC123"
+Step 14: Admin sees new patient & appointment
+
+
+🔑 KEY FILES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+app/page.tsx                        - Homepage
+app/admin/page.tsx                  - Admin dashboard
+components/VapiVoiceCall.tsx        - Voice call button
+lib/supabase.ts                     - Database client
+app/api/webhooks/vapi/route.ts      - Voice webhooks
+app/api/webhooks/telnyx/sms/route.ts - SMS webhooks
+supabase/schema.sql                 - Database schema
+
+
+🔒 SECURITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Row Level Security (RLS) enabled
+✓ Environment variables in .env.local
+✓ .env.local in .gitignore
+✓ Phone number validation
+✓ Input sanitization
+✓ Service role for backend operations
+
+
+⚡ PERFORMANCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Database indexes on phone, dates, timestamps
+✓ Parallel queries with Promise.all()
+✓ Efficient data fetching
+✓ Optimized React rendering
+
+
+📝 COMMON OPERATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add Patient:
+await supabase.from('patients').insert({
+  first_name, last_name, phone, email
+});
+
+Log Interaction:
+await supabase.from('interactions').insert({
+  channel: 'sms', direction: 'inbound', message_body
+});
+
+Create Appointment:
+await supabase.from('appointments').insert({
+  patient_id, appointment_date, status: 'scheduled'
+});
+
+
+🎓 SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Simple Flow:
+User → API → Logic → Database → Response
+
+Features:
+✓ Multi-channel (Web, SMS, Voice)
+✓ Real-time webhooks
+✓ Complete logging
+✓ Admin dashboard
+✓ AI-powered responses
+✓ Secure & scalable
+
+
+📚 DOCUMENTATION FILES CREATED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. PROJECT-FLOW-ANALYSIS.md    - Detailed English analysis
+2. CODE-FLOW-URDU.md            - Urdu/Hindi guide
+3. QUICK-CODE-REFERENCE.txt     - This file (quick ref)
+
+
+╔════════════════════════════════════════════════════════════════╗
+║  Project is fully analyzed and documented! 🎉                  ║
+╚════════════════════════════════════════════════════════════════╝
