@@ -1,12 +1,11 @@
 'use client';
 
-import ChatWidget from '@/components/ChatWidget';
 import { Phone, MessageSquare, Calendar, Clock, MapPin, Heart } from 'lucide-react';
+import VapiVoiceCall from '@/components/VapiVoiceCall';
 
 export default function Home() {
-  const handleCallClick = () => {
-    window.location.href = 'tel:+14155551000';
-  };
+  const vapiPublicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || '';
+  const vapiAssistantId = '365fca0e-ff6a-42a0-a944-01f1dbb552fa';
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
@@ -30,13 +29,7 @@ export default function Home() {
               <MessageSquare size={20} />
               Start Chat
             </button>
-            <button 
-              onClick={handleCallClick}
-              className="bg-white hover:bg-gray-50 text-primary-600 border-2 border-primary-600 px-8 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2"
-            >
-              <Phone size={20} />
-              Call Us
-            </button>
+            <VapiVoiceCall publicKey={vapiPublicKey} assistantId={vapiAssistantId} />
           </div>
         </div>
       </div>
@@ -140,8 +133,7 @@ export default function Home() {
             Ready to Get Started?
           </h2>
           <p className="text-xl text-primary-100 mb-8">
-            Click the chat button in the bottom right corner to start a conversation, 
-            or text us at your convenience.
+            Contact us by phone or text at your convenience.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <div className="bg-white text-primary-600 px-6 py-3 rounded-lg font-semibold">
@@ -164,8 +156,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Chat Widget */}
-      <ChatWidget />
     </main>
   );
 }

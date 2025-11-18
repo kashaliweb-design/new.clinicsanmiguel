@@ -1,5 +1,17 @@
 {
   "categories": {
+    "about": {
+      "questions": [
+        {"q": "Tell me about Clinica San Miguel", "a": "Clinica San Miguel is located in Texas with 19 convenient locations across Dallas, Fort Worth, Houston, Pasadena, Fresno, Farmers Branch, Arlington, and San Antonio. We are committed to serving diverse communities across the state of Texas with bilingual English and Spanish-speaking providers."},
+        {"q": "What is your history?", "a": "Our journey began in 2015 with the establishment of Alianza Medica Hispana, our very first location. Over the years, we've grown and transformed into Clinica San Miguel, expanding our reach and enhancing our services. We now proudly serve patients aged five and older throughout Texas."},
+        {"q": "How many locations do you have?", "a": "We have 19 convenient locations across Texas, including Dallas, Fort Worth, Houston, Pasadena, Fresno, Farmers Branch, Arlington, and San Antonio."},
+        {"q": "When did you start?", "a": "We started in 2015 as Alianza Medica Hispana and have since grown into Clinica San Miguel, serving communities across Texas."},
+        {"q": "What makes you different?", "a": "We offer comprehensive family healthcare with bilingual English and Spanish-speaking providers, state-of-the-art facilities, on-site procedures, and affordable care starting at $19 with no insurance required."},
+        {"q": "Who do you serve?", "a": "We serve patients aged five and older throughout Texas, with a special commitment to diverse communities. Our bilingual team ensures everyone receives quality healthcare."},
+        {"q": "What was Alianza Medica Hispana?", "a": "Alianza Medica Hispana was our very first location established in 2015. We've since grown and transformed into Clinica San Miguel, expanding our services across Texas."},
+        {"q": "¿Cuéntame sobre Clínica San Miguel?", "a": "Clínica San Miguel está ubicada en Texas con 19 ubicaciones convenientes en Dallas, Fort Worth, Houston, Pasadena, Fresno, Farmers Branch, Arlington y San Antonio. Estamos comprometidos a servir a diversas comunidades en todo el estado de Texas con proveedores bilingües que hablan inglés y español."}
+      ]
+    },
     "pricing": {
       "questions": [
         {"q": "How much does a visit cost?", "a": "Our visits start at just $19. This affordable price includes a general health check-up where our caring team checks your vitals, answers your questions, and helps you feel your best."},
@@ -9,21 +21,29 @@
         {"q": "What does the $19 visit include?", "a": "The $19 visit includes a general health check-up with vital signs monitoring, health assessment, and consultation with our medical team."},
         {"q": "Are there any hidden fees?", "a": "No hidden fees! Our transparent pricing starts at $19 for quality healthcare visits."},
         {"q": "Can I afford your services?", "a": "Yes! We designed our services to be affordable for everyone, starting at just $19 with no insurance required."},
+        {"q": "How much is a DOT test?", "a": "Our DOT exam costs $80. We offer this service 7 days a week with no appointment necessary."},
+        {"q": "How much is a school physical?", "a": "School physicals cost $60. Ask about any promotional prices in effect at the time of your visit."},
+        {"q": "How much is a PSA test?", "a": "The prostate blood test (PSA) costs $70. No appointment necessary."},
         {"q": "¿Cuánto cuesta una visita?", "a": "Nuestras visitas comienzan en solo $19. Este precio asequible incluye un chequeo general de salud donde nuestro equipo verifica sus signos vitales, responde sus preguntas y le ayuda a sentirse mejor."},
         {"q": "¿Necesito seguro?", "a": "¡No se necesita seguro! Nuestros servicios comienzan en solo $19, haciendo que la atención médica de calidad sea asequible para todos."}
       ]
     },
     "locations": {
       "questions": [
-        {"q": "Where are you located?", "a": "We have 17 clinics across Texas, including locations in Dallas, Houston, and San Antonio. Visit our website to find the clinic nearest to you."},
-        {"q": "How many locations do you have?", "a": "We have 17 convenient locations throughout Texas to serve you better."},
-        {"q": "Do you have a clinic near me?", "a": "With 17 locations across Texas in cities like Dallas, Houston, and San Antonio, we likely have a clinic near you. Check our website for the complete list."},
-        {"q": "What cities are you in?", "a": "We serve communities across Texas with clinics in Dallas, Houston, San Antonio, and 14 other locations."},
-        {"q": "Where is the nearest clinic?", "a": "We have 17 clinics across Texas. Please visit our website or tell us your city, and we'll help you find the nearest location."},
-        {"q": "How do I find your clinic?", "a": "Visit our website to use our clinic locator map. We have 17 convenient locations across Texas."},
+        {"q": "Where are you located?", "a": "We have 19 convenient locations across Texas, including Dallas, Fort Worth, Houston, Pasadena, Fresno, Farmers Branch, Arlington, and San Antonio."},
+        {"q": "How many locations do you have?", "a": "We have 19 convenient locations throughout Texas to serve you better."},
+        {"q": "Do you have a clinic near me?", "a": "With 19 locations across Texas in cities like Dallas, Houston, San Antonio, Fort Worth, Pasadena, Fresno, Farmers Branch, and Arlington, we likely have a clinic near you. Check our website for the complete list."},
+        {"q": "What cities are you in?", "a": "We serve communities across Texas with clinics in Dallas, Fort Worth, Houston, Pasadena, Fresno, Farmers Branch, Arlington, and San Antonio."},
+        {"q": "Where is the nearest clinic?", "a": "We have 19 clinics across Texas. Please visit our website or tell us your city, and we'll help you find the nearest location."},
+        {"q": "How do I find your clinic?", "a": "Visit our website to use our clinic locator map. We have 19 convenient locations across Texas."},
         {"q": "Are you in Dallas?", "a": "Yes! We have locations in Dallas and throughout Texas. Visit our website to find the Dallas clinic nearest to you."},
         {"q": "Are you in Houston?", "a": "Yes! We serve Houston with multiple locations. Check our website for the Houston clinic nearest to you."},
-        {"q": "¿Dónde están ubicados?", "a": "Tenemos 17 clínicas en todo Texas, incluyendo ubicaciones en Dallas, Houston y San Antonio. Visite nuestro sitio web para encontrar la clínica más cercana a usted."}
+        {"q": "Are you in San Antonio?", "a": "Yes! We have clinics in San Antonio. Visit our website for the exact location."},
+        {"q": "Are you in Fort Worth?", "a": "Yes! We serve Fort Worth. Check our website for the clinic location."},
+        {"q": "Are you in Arlington?", "a": "Yes! We have a clinic in Arlington, Texas. Visit our website for details."},
+        {"q": "Are you in Pasadena?", "a": "Yes! We serve Pasadena, Texas. Check our website for the clinic location."},
+        {"q": "Are you in Farmers Branch?", "a": "Yes! We have a clinic at 14510 S Josey Ln, Farmers Branch, TX 75234."},
+        {"q": "¿Dónde están ubicados?", "a": "Tenemos 19 ubicaciones convenientes en todo Texas, incluyendo Dallas, Fort Worth, Houston, Pasadena, Fresno, Farmers Branch, Arlington y San Antonio."}
       ]
     },
     "services": {
