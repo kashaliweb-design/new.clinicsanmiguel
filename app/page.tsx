@@ -2,6 +2,7 @@
 
 import { Phone, MessageSquare, Calendar, Clock, MapPin, Heart } from 'lucide-react';
 import VapiVoiceCall from '@/components/VapiVoiceCall';
+import WebChat from '@/components/WebChat';
 
 export default function Home() {
   const vapiPublicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || '';
@@ -25,10 +26,7 @@ export default function Home() {
             and connect with care - all through chat, SMS, or voice.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <button className="bg-primary-600 hover:bg-primary-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2">
-              <MessageSquare size={20} />
-              Start Chat
-            </button>
+            <WebChat />
             <VapiVoiceCall publicKey={vapiPublicKey} assistantId={vapiAssistantId} />
           </div>
         </div>
