@@ -306,6 +306,12 @@ async function handleCallEnd(data: any) {
       }
     }
 
+    // Extract intent from conversation
+    const fullText = Array.isArray(transcript) 
+      ? transcript.map((t: any) => t.text || t.content || '').join(' ')
+      : (summary || '');
+    const intent = extractIntent(fullText);
+
     await supabase.from('interactions').insert({
       session_id: callId,
       patient_id: patientId,
@@ -314,7 +320,7 @@ async function handleCallEnd(data: any) {
       from_number: phoneNumber || 'Web Caller',
       to_number: 'clinic',
       message_body: summary || `Voice call ended: ${endedReason || 'completed'}. Duration: ${duration}s`,
-      intent: 'call_ended',
+      intent: intent,
       metadata: {
         call_id: callId,
         event: 'end-of-call-report',
@@ -325,6 +331,50 @@ async function handleCallEnd(data: any) {
         full_data: data,
       },
     });
+
+    // Create appointment if intent is appointment booking
+    if (intent === 'appointment_booking' && patientId) {
+      console.log('=== CREATING APPOINTMENT ===');
+      
+      // Extract appointment details from conversation
+      const appointmentInfo = extractAppointmentInfo(fullText, summary, analysis);
+      console.log('Extracted appointment info:', appointmentInfo);
+
+      // Get first available clinic
+      const { data: clinic } = await supabase
+        .from('clinics')
+        .select('id')
+        .limit(1)
+        .single();
+
+      if (clinic) {
+        const { data: appointment, error: appointmentError } = await supabase
+          .from('appointments')
+          .insert({
+            patient_id: patientId,
+            clinic_id: clinic.id,
+            appointment_date: appointmentInfo.date || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
+            appointment_time: appointmentInfo.time || '10:00:00',
+            reason: appointmentInfo.reason || 'General Consultation',
+            status: 'scheduled',
+            notes: `Appointment scheduled via VAPI call. Call ID: ${callId}`,
+            created_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (appointmentError) {
+          console.error('Error creating appointment:', appointmentError);
+        } else {
+          console.log('=== APPOINTMENT CREATED ===');
+          console.log('Appointment ID:', appointment?.id);
+          console.log('Date:', appointmentInfo.date);
+          console.log('Time:', appointmentInfo.time);
+        }
+      } else {
+        console.log('No clinic found, skipping appointment creation');
+      }
+    }
   } catch (error) {
     console.error('Error logging call end:', error);
   }
@@ -354,6 +404,92 @@ function extractIntent(text: string): string {
   }
   
   return 'general_inquiry';
+}
+
+// Extract appointment information from conversation
+function extractAppointmentInfo(text: string, summary: string, analysis: any): any {
+  const appointmentInfo: any = {
+    date: null,
+    time: null,
+    reason: null,
+  };
+
+  try {
+    const lowerText = text.toLowerCase();
+
+    // Extract date patterns
+    // Look for dates like "tomorrow", "next Monday", "December 25", etc.
+    const datePatterns = [
+      /(?:on|for)\s+(tomorrow|today)/i,
+      /(?:on|for)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i,
+      /(?:on|for)\s+(\w+\s+\d{1,2}(?:st|nd|rd|th)?)/i,
+      /(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})/,
+    ];
+
+    for (const pattern of datePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const dateStr = match[1];
+        if (dateStr === 'tomorrow') {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          appointmentInfo.date = tomorrow.toISOString().split('T')[0];
+        } else if (dateStr === 'today') {
+          appointmentInfo.date = new Date().toISOString().split('T')[0];
+        } else {
+          // Try to parse the date
+          const parsed = new Date(dateStr);
+          if (!isNaN(parsed.getTime())) {
+            appointmentInfo.date = parsed.toISOString().split('T')[0];
+          }
+        }
+        break;
+      }
+    }
+
+    // Extract time patterns
+    // Look for times like "10 AM", "2:30 PM", "14:00", etc.
+    const timePatterns = [
+      /(\d{1,2}):(\d{2})\s*(am|pm)/i,
+      /(\d{1,2})\s*(am|pm)/i,
+      /(\d{1,2}):(\d{2})/,
+    ];
+
+    for (const pattern of timePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        let hours = parseInt(match[1]);
+        const minutes = match[2] ? parseInt(match[2]) : 0;
+        const meridiem = match[3]?.toLowerCase();
+
+        if (meridiem === 'pm' && hours < 12) hours += 12;
+        if (meridiem === 'am' && hours === 12) hours = 0;
+
+        appointmentInfo.time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+        break;
+      }
+    }
+
+    // Extract reason/purpose
+    if (lowerText.includes('checkup') || lowerText.includes('check up')) {
+      appointmentInfo.reason = 'General Checkup';
+    } else if (lowerText.includes('consultation')) {
+      appointmentInfo.reason = 'Consultation';
+    } else if (lowerText.includes('follow up') || lowerText.includes('followup')) {
+      appointmentInfo.reason = 'Follow-up Visit';
+    } else if (lowerText.includes('emergency')) {
+      appointmentInfo.reason = 'Emergency';
+    } else if (lowerText.includes('dental')) {
+      appointmentInfo.reason = 'Dental Appointment';
+    } else {
+      appointmentInfo.reason = 'General Consultation';
+    }
+
+  } catch (error) {
+    console.error('Error extracting appointment info:', error);
+  }
+
+  return appointmentInfo;
 }
 
 // Extract patient information from conversation transcript
