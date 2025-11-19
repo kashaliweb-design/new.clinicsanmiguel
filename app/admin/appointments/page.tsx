@@ -11,6 +11,29 @@ export default function AppointmentsPage() {
 
   useEffect(() => {
     loadAppointments();
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
+        },
+        (payload) => {
+          console.log('Appointment change detected:', payload);
+          // Reload appointments when any change occurs
+          loadAppointments();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [filter]);
 
   const loadAppointments = async () => {

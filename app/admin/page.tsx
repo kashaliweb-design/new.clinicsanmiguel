@@ -24,6 +24,62 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadDashboardData();
+
+    // Set up real-time subscriptions for all tables
+    const interactionsChannel = supabase
+      .channel('dashboard-interactions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'interactions',
+        },
+        (payload) => {
+          console.log('Interaction change detected:', payload);
+          loadDashboardData();
+        }
+      )
+      .subscribe();
+
+    const appointmentsChannel = supabase
+      .channel('dashboard-appointments')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
+        },
+        (payload) => {
+          console.log('Appointment change detected:', payload);
+          loadDashboardData();
+        }
+      )
+      .subscribe();
+
+    const patientsChannel = supabase
+      .channel('dashboard-patients')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'patients',
+        },
+        (payload) => {
+          console.log('Patient change detected:', payload);
+          loadDashboardData();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      supabase.removeChannel(interactionsChannel);
+      supabase.removeChannel(appointmentsChannel);
+      supabase.removeChannel(patientsChannel);
+    };
   }, []);
 
   const loadDashboardData = async () => {

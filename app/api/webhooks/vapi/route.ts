@@ -69,8 +69,9 @@ async function handleCallStart(data: any) {
 
       if (existingPatient) {
         patientId = existingPatient.id;
+        console.log('Found existing patient:', patientId);
       } else {
-        // Create new patient record
+        // Create placeholder patient record (will be updated at call end with real details)
         const { data: newPatient } = await supabase
           .from('patients')
           .insert({
@@ -85,7 +86,7 @@ async function handleCallStart(data: any) {
         
         if (newPatient) {
           patientId = newPatient.id;
-          console.log('Created new patient:', patientId);
+          console.log('Created placeholder patient (will update with details):', patientId);
         }
       }
     }
@@ -236,10 +237,16 @@ async function handleCallEnd(data: any) {
   const endedReason = message?.endedReason || callData?.endedReason;
   const duration = message?.duration || callData?.duration;
   const summary = message?.summary || callData?.summary;
+  const transcript = message?.transcript || callData?.transcript || [];
+  const analysis = message?.analysis || callData?.analysis;
 
   console.log('Vapi call ended:', { callId, phoneNumber, duration, endedReason });
 
   try {
+    // Extract patient information from conversation
+    const patientInfo = extractPatientInfo(transcript, summary, analysis);
+    console.log('Extracted patient info:', patientInfo);
+
     // Try to find or create patient
     let patientId = null;
     if (phoneNumber && phoneNumber !== 'unknown') {
@@ -251,15 +258,34 @@ async function handleCallEnd(data: any) {
 
       if (existingPatient) {
         patientId = existingPatient.id;
+        
+        // Update patient with extracted information if available
+        if (patientInfo.first_name || patientInfo.last_name || patientInfo.date_of_birth || patientInfo.email) {
+          const updateData: any = {};
+          if (patientInfo.first_name) updateData.first_name = patientInfo.first_name;
+          if (patientInfo.last_name) updateData.last_name = patientInfo.last_name;
+          if (patientInfo.date_of_birth) updateData.date_of_birth = patientInfo.date_of_birth;
+          if (patientInfo.email) updateData.email = patientInfo.email;
+          if (patientInfo.preferred_language) updateData.preferred_language = patientInfo.preferred_language;
+          
+          await supabase
+            .from('patients')
+            .update(updateData)
+            .eq('id', patientId);
+          
+          console.log('Updated patient with extracted info:', updateData);
+        }
       } else {
-        // Create new patient
+        // Create new patient with extracted information
         const { data: newPatient } = await supabase
           .from('patients')
           .insert({
-            first_name: 'Voice',
-            last_name: 'Caller',
+            first_name: patientInfo.first_name || 'Voice',
+            last_name: patientInfo.last_name || 'Caller',
             phone: phoneNumber,
-            preferred_language: 'en',
+            email: patientInfo.email || null,
+            date_of_birth: patientInfo.date_of_birth || null,
+            preferred_language: patientInfo.preferred_language || 'en',
             consent_voice: true,
           })
           .select()
@@ -267,7 +293,7 @@ async function handleCallEnd(data: any) {
         
         if (newPatient) {
           patientId = newPatient.id;
-          console.log('Created new patient from call end:', patientId);
+          console.log('Created new patient from call end with details:', patientInfo);
         }
       }
     }
@@ -320,4 +346,94 @@ function extractIntent(text: string): string {
   }
   
   return 'general_inquiry';
+}
+
+// Extract patient information from conversation transcript
+function extractPatientInfo(transcript: any, summary: string, analysis: any): any {
+  const patientInfo: any = {
+    first_name: null,
+    last_name: null,
+    date_of_birth: null,
+    email: null,
+    preferred_language: 'en',
+  };
+
+  try {
+    // Combine all text from transcript
+    let fullText = '';
+    if (Array.isArray(transcript)) {
+      fullText = transcript
+        .map((t: any) => t.text || t.content || t.message || '')
+        .join(' ');
+    } else if (typeof transcript === 'string') {
+      fullText = transcript;
+    }
+
+    // Add summary if available
+    if (summary) {
+      fullText += ' ' + summary;
+    }
+
+    // Add analysis if available
+    if (analysis && typeof analysis === 'object') {
+      fullText += ' ' + JSON.stringify(analysis);
+    }
+
+    const lowerText = fullText.toLowerCase();
+
+    // Extract name patterns
+    // Look for "my name is [Name]" or "I'm [Name]" or "this is [Name]"
+    const namePatterns = [
+      /(?:my name is|i'm|this is|i am)\s+([A-Z][a-z]+)\s+([A-Z][a-z]+)/i,
+      /(?:name|called)\s*:?\s*([A-Z][a-z]+)\s+([A-Z][a-z]+)/i,
+    ];
+
+    for (const pattern of namePatterns) {
+      const match = fullText.match(pattern);
+      if (match) {
+        patientInfo.first_name = match[1];
+        patientInfo.last_name = match[2];
+        break;
+      }
+    }
+
+    // Extract date of birth patterns
+    // Look for dates in various formats
+    const dobPatterns = [
+      /(?:born|birth|dob|date of birth)\s*:?\s*(\d{4}[-/]\d{1,2}[-/]\d{1,2})/i,
+      /(?:born|birth|dob)\s*:?\s*(\d{1,2}[-/]\d{1,2}[-/]\d{4})/i,
+      /(\d{4}[-/]\d{1,2}[-/]\d{1,2})/,
+    ];
+
+    for (const pattern of dobPatterns) {
+      const match = fullText.match(pattern);
+      if (match) {
+        // Try to parse and format the date
+        const dateStr = match[1];
+        const date = new Date(dateStr);
+        if (!isNaN(date.getTime())) {
+          patientInfo.date_of_birth = date.toISOString().split('T')[0];
+          break;
+        }
+      }
+    }
+
+    // Extract email patterns
+    const emailPattern = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/;
+    const emailMatch = fullText.match(emailPattern);
+    if (emailMatch) {
+      patientInfo.email = emailMatch[1];
+    }
+
+    // Detect language preference
+    if (lowerText.includes('spanish') || lowerText.includes('español') || lowerText.includes('espanol')) {
+      patientInfo.preferred_language = 'es';
+    }
+
+    console.log('Extracted patient info from transcript:', patientInfo);
+  } catch (error) {
+    console.error('Error extracting patient info:', error);
+  }
+
+  return patientInfo;
 }
