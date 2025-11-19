@@ -240,12 +240,20 @@ async function handleCallEnd(data: any) {
   const transcript = message?.transcript || callData?.transcript || [];
   const analysis = message?.analysis || callData?.analysis;
 
-  console.log('Vapi call ended:', { callId, phoneNumber, duration, endedReason });
+  console.log('=== VAPI CALL ENDED ===');
+  console.log('Call ID:', callId);
+  console.log('Phone Number:', phoneNumber);
+  console.log('Duration:', duration);
+  console.log('Ended Reason:', endedReason);
+  console.log('Summary:', summary);
+  console.log('Transcript:', JSON.stringify(transcript, null, 2));
+  console.log('Analysis:', JSON.stringify(analysis, null, 2));
 
   try {
     // Extract patient information from conversation
     const patientInfo = extractPatientInfo(transcript, summary, analysis);
-    console.log('Extracted patient info:', patientInfo);
+    console.log('=== EXTRACTED PATIENT INFO ===');
+    console.log(JSON.stringify(patientInfo, null, 2));
 
     // Try to find or create patient
     let patientId = null;
