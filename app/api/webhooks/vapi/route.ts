@@ -333,6 +333,11 @@ async function handleCallEnd(data: any) {
     });
 
     // Create appointment if intent is appointment booking
+    console.log('=== APPOINTMENT CHECK ===');
+    console.log('Intent:', intent);
+    console.log('Patient ID:', patientId);
+    console.log('Should create appointment:', intent === 'appointment_booking' && patientId);
+    
     if (intent === 'appointment_booking' && patientId) {
       console.log('=== CREATING APPOINTMENT ===');
       
