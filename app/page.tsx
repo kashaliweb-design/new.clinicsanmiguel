@@ -3,7 +3,8 @@
 import { Phone, MessageSquare, Calendar, Clock, MapPin, Heart } from 'lucide-react';
 import VapiVoiceCall from '@/components/VapiVoiceCall';
 import WebChat from '@/components/WebChat';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import locationsData from '@/data/us-locations.json';
 
 export default function Home() {
   const vapiPublicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || '';
@@ -15,6 +16,7 @@ export default function Home() {
     state: '',
     house: '',
     street: '',
+    city: '',
     zipcode: ''
   });
 
@@ -27,6 +29,12 @@ export default function Home() {
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [houseSuggestions, setHouseSuggestions] = useState<any[]>([]);
+  const [streetSuggestions, setStreetSuggestions] = useState<any[]>([]);
+  const [showHouseSuggestions, setShowHouseSuggestions] = useState(false);
+  const [showStreetSuggestions, setShowStreetSuggestions] = useState(false);
+  const houseInputRef = useRef<HTMLInputElement>(null);
+  const streetInputRef = useRef<HTMLInputElement>(null);
 
   // US States
   const usStates = [
@@ -39,6 +47,27 @@ export default function Home() {
     'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia',
     'Wisconsin', 'Wyoming'
   ];
+
+  // ZIP code to address lookup
+  const zipLookup: { [key: string]: { house: string; street: string; city: string; state: string } } = {
+    "75203": { house: "428", street: "E Jefferson Blvd, Suite 123", city: "Dallas", state: "Texas" },
+    "75220": { house: "2731", street: "W Northwest Hwy", city: "Dallas", state: "Texas" },
+    "75218": { house: "11411", street: "E NorthWest Hwy", city: "Dallas", state: "Texas" },
+    "76010": { house: "787", street: "E Park Row Dr", city: "Arlington", state: "Texas" },
+    "77545": { house: "12033", street: "SH-6 N", city: "Fresno", state: "Texas" },
+    "77015": { house: "12741", street: "East Freeway", city: "Houston", state: "Texas" },
+    "77067": { house: "11243", street: "Veterans Memorial Dr, Ste H", city: "Houston", state: "Texas" },
+    "77084": { house: "4240", street: "Hwy 6 G", city: "Houston", state: "Texas" },
+    "77036": { house: "5712", street: "Fondren Rd", city: "Houston", state: "Texas" },
+    "77386": { house: "25538", street: "Interstate 45 N, Suite B", city: "Spring", state: "Texas" },
+    "77502": { house: "2777", street: "Shaver St", city: "Pasadena", state: "Texas" },
+    "78221": { house: "680", street: "SW Military Dr, Suite EF", city: "San Antonio", state: "Texas" },
+    "78217": { house: "13032", street: "Nacogdoches Rd, Suite 213", city: "San Antonio", state: "Texas" },
+    "78216": { house: "5525", street: "Blanco Rd, Suite 102", city: "San Antonio", state: "Texas" },
+    "76114": { house: "4819", street: "River Oaks Blvd", city: "Fort Worth", state: "Texas" },
+    "76115": { house: "1114", street: "East Seminary Dr", city: "Fort Worth", state: "Texas" },
+    "75234": { house: "14510", street: "Josey Lane, Suite 208", city: "Farmers Branch", state: "Texas" }
+  };
 
   // Validation functions
   const validateZipCode = (zip: string) => {
@@ -54,9 +83,72 @@ export default function Home() {
     if (errors[name as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+
+    // Handle ZIP code auto-fill
+    if (name === 'zipcode' && value.length === 5) {
+      const addressData = zipLookup[value];
+      if (addressData) {
+        setFormData(prev => ({
+          ...prev,
+          house: addressData.house,
+          street: addressData.street,
+          city: addressData.city,
+          state: addressData.state,
+          zipcode: value
+        }));
+        setErrors(prev => ({
+          ...prev,
+          house: '',
+          street: '',
+          state: ''
+        }));
+        // Show success message
+        setTimeout(() => {
+          alert(`✅ Address auto-filled for ZIP ${value}!\n\n${addressData.house} ${addressData.street}\n${addressData.city}, ${addressData.state} ${value}`);
+        }, 100);
+      }
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const selectHouseSuggestion = (location: any) => {
+    setFormData(prev => ({
+      ...prev,
+      house: location.house,
+      street: location.street,
+      city: location.city,
+      state: location.state,
+      zipcode: location.zip
+    }));
+    setShowHouseSuggestions(false);
+    setErrors(prev => ({
+      ...prev,
+      house: '',
+      street: '',
+      state: '',
+      zipcode: ''
+    }));
+  };
+
+  const selectStreetSuggestion = (location: any) => {
+    setFormData(prev => ({
+      ...prev,
+      house: location.house,
+      street: location.street,
+      city: location.city,
+      state: location.state,
+      zipcode: location.zip
+    }));
+    setShowStreetSuggestions(false);
+    setErrors(prev => ({
+      ...prev,
+      house: '',
+      street: '',
+      state: '',
+      zipcode: ''
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const newErrors = {
@@ -87,11 +179,12 @@ export default function Home() {
 
     setErrors(newErrors);
 
-    // If no errors, submit the form
+    // If no errors, submit
     if (!Object.values(newErrors).some(error => error)) {
-      alert('Form submitted successfully!\n\n' + 
+      alert('✅ Form submitted successfully!\n\n' + 
         `Country: ${formData.country}\n` +
         `State: ${formData.state}\n` +
+        `City: ${formData.city}\n` +
         `Address: ${formData.house} ${formData.street}\n` +
         `ZIP Code: ${formData.zipcode}`
       );
@@ -101,6 +194,7 @@ export default function Home() {
         state: '',
         house: '',
         street: '',
+        city: '',
         zipcode: ''
       });
       // Close modal
@@ -114,6 +208,7 @@ export default function Home() {
       state: '',
       house: '',
       street: '',
+      city: '',
       zipcode: ''
     });
     setErrors({
@@ -124,7 +219,24 @@ export default function Home() {
     });
   };
 
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (houseInputRef.current && !houseInputRef.current.contains(event.target as Node)) {
+        setShowHouseSuggestions(false);
+      }
+      if (streetInputRef.current && !streetInputRef.current.contains(event.target as Node)) {
+        setShowStreetSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
+    <>
+      
     <main className="min-h-screen bg-gradient-to-b from-red-50 to-white">
       {/* Header Navigation */}
       <header className="bg-white shadow-sm border-b border-gray-200">
@@ -158,7 +270,6 @@ export default function Home() {
             and connect with care - all through chat, SMS, or voice.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <WebChat />
             <VapiVoiceCall publicKey={vapiPublicKey} assistantId={vapiAssistantId} />
             <button 
               onClick={() => setIsModalOpen(true)}
@@ -171,6 +282,9 @@ export default function Home() {
               Find Location
             </button>
           </div>
+          
+          {/* Floating Chat Icon */}
+          <WebChat />
         </div>
       </div>
 
@@ -368,7 +482,7 @@ export default function Home() {
                     name="house"
                     value={formData.house}
                     onChange={handleInputChange}
-                    placeholder="e.g., 123"
+                    placeholder="Enter house number"
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent ${ 
                       errors.house ? 'border-red-500' : 'border-gray-300'
                     }`}
@@ -389,7 +503,7 @@ export default function Home() {
                     name="street"
                     value={formData.street}
                     onChange={handleInputChange}
-                    placeholder="e.g., Main Street"
+                    placeholder="Enter street name"
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent ${ 
                       errors.street ? 'border-red-500' : 'border-gray-300'
                     }`}
@@ -397,6 +511,22 @@ export default function Home() {
                   {errors.street && (
                     <p className="mt-1 text-sm text-red-500">{errors.street}</p>
                   )}
+                </div>
+
+                {/* City (Auto-filled) */}
+                <div className="mb-6">
+                  <label htmlFor="city" className="block text-sm font-semibold text-gray-700 mb-2">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    placeholder="Auto-filled from address"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
+                  />
                 </div>
 
                 {/* ZIP Code */}
@@ -410,7 +540,8 @@ export default function Home() {
                     name="zipcode"
                     value={formData.zipcode}
                     onChange={handleInputChange}
-                    placeholder="e.g., 12345 or 12345-6789"
+                    placeholder="Enter 5-digit ZIP code"
+                    maxLength={5}
                     className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent ${ 
                       errors.zipcode ? 'border-red-500' : 'border-gray-300'
                     }`}
@@ -418,6 +549,9 @@ export default function Home() {
                   {errors.zipcode && (
                     <p className="mt-1 text-sm text-red-500">{errors.zipcode}</p>
                   )}
+                  <p className="mt-1 text-xs text-gray-500">
+                    ⚡ Enter ZIP code to auto-fill address (17 Texas locations available)
+                  </p>
                 </div>
 
                 {/* Submit Buttons */}
@@ -443,5 +577,6 @@ export default function Home() {
       )}
 
     </main>
+    </>
   );
 }

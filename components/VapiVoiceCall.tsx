@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Phone, PhoneOff } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Phone, PhoneOff, User, Bot, X } from 'lucide-react';
 import Vapi from '@vapi-ai/web';
 
 interface VapiVoiceCallProps {
@@ -9,11 +9,41 @@ interface VapiVoiceCallProps {
   assistantId?: string;
 }
 
+interface TranscriptMessage {
+  id: string;
+  speaker: 'user' | 'agent';
+  text: string;
+  timestamp: Date;
+}
+
 export default function VapiVoiceCall({ publicKey, assistantId }: VapiVoiceCallProps) {
   const [vapi, setVapi] = useState<any>(null);
   const [isCallActive, setIsCallActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [callStatus, setCallStatus] = useState<string>('');
+  const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
+  const callTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const scrollToBottom = () => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [transcript]);
+
+  const addTranscriptMessage = (speaker: 'user' | 'agent', text: string) => {
+    const newMessage: TranscriptMessage = {
+      id: Date.now().toString() + Math.random(),
+      speaker,
+      text,
+      timestamp: new Date(),
+    };
+    setTranscript((prev) => [...prev, newMessage]);
+  };
 
   useEffect(() => {
     // Check if public key is provided
@@ -34,12 +64,27 @@ export default function VapiVoiceCall({ publicKey, assistantId }: VapiVoiceCallP
         setIsCallActive(true);
         setIsLoading(false);
         setCallStatus('Connected');
+        setTranscript([]);
+        setCallDuration(0);
+        
+        // Start call timer
+        callTimerRef.current = setInterval(() => {
+          setCallDuration((prev) => prev + 1);
+        }, 1000);
+
+        // Add welcome message
+        setTimeout(() => {
+          addTranscriptMessage('agent', 'Thank you for calling Wellness Partners. This is Riley, your scheduling assistant. How may I help you today?');
+        }, 500);
       });
 
       vapiInstance.on('call-end', () => {
         console.log('Call ended');
         setIsCallActive(false);
         setCallStatus('');
+        if (callTimerRef.current) {
+          clearInterval(callTimerRef.current);
+        }
       });
 
       vapiInstance.on('speech-start', () => {
@@ -50,11 +95,25 @@ export default function VapiVoiceCall({ publicKey, assistantId }: VapiVoiceCallP
         setCallStatus('Processing...');
       });
 
+      // Listen for transcript messages
+      vapiInstance.on('message', (message: any) => {
+        console.log('Vapi message:', message);
+        
+        if (message.type === 'transcript' && message.transcript) {
+          const text = message.transcript;
+          const speaker = message.role === 'assistant' ? 'agent' : 'user';
+          addTranscriptMessage(speaker, text);
+        }
+      });
+
       vapiInstance.on('error', (error: any) => {
         console.error('Vapi error:', error);
         setIsCallActive(false);
         setIsLoading(false);
         setCallStatus('');
+        if (callTimerRef.current) {
+          clearInterval(callTimerRef.current);
+        }
         alert('Call failed. Please try again.');
       });
     } catch (error) {
@@ -64,6 +123,9 @@ export default function VapiVoiceCall({ publicKey, assistantId }: VapiVoiceCallP
     return () => {
       if (vapi) {
         vapi.stop();
+      }
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
       }
     };
   }, [publicKey]);
@@ -124,32 +186,142 @@ export default function VapiVoiceCall({ publicKey, assistantId }: VapiVoiceCallP
     );
   }
 
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
-    <div className="flex flex-col items-center gap-2">
-      {!isCallActive ? (
-        <button
-          onClick={startCall}
-          disabled={isLoading || !vapi}
-          className="bg-white hover:bg-gray-50 text-primary-600 border-2 border-primary-600 px-8 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+    <>
+      <div className="flex flex-col items-center gap-2">
+        {!isCallActive ? (
+          <button
+            onClick={startCall}
+            disabled={isLoading || !vapi}
+            className="bg-white hover:bg-gray-50 text-primary-600 border-2 border-primary-600 px-8 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Phone size={20} />
+            {isLoading ? 'Connecting...' : !vapi ? 'Loading...' : 'Call Us'}
+          </button>
+        ) : (
+          <button
+            onClick={endCall}
+            className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2 animate-pulse"
+          >
+            <PhoneOff size={20} />
+            End Call
+          </button>
+        )}
+        
+        {callStatus && (
+          <p className="text-sm text-gray-600 animate-pulse">
+            {callStatus}
+          </p>
+        )}
+      </div>
+
+      {/* Live Transcript Display */}
+      {isCallActive && (
+        <div
+          className={`fixed ${
+            isMinimized ? 'bottom-6 right-6 w-80' : 'bottom-6 right-6 w-96'
+          } bg-white rounded-2xl shadow-2xl z-50 transition-all duration-300`}
         >
-          <Phone size={20} />
-          {isLoading ? 'Connecting...' : !vapi ? 'Loading...' : 'Call Us'}
-        </button>
-      ) : (
-        <button
-          onClick={endCall}
-          className="bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2 animate-pulse"
-        >
-          <PhoneOff size={20} />
-          End Call
-        </button>
+          {/* Header */}
+          <div
+            className="text-white p-4 rounded-t-2xl flex items-center justify-between"
+            style={{ backgroundColor: '#C1001F' }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-white p-2 rounded-full" style={{ color: '#C1001F' }}>
+                <Phone size={20} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm">Live Call Transcript</h3>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <p className="text-xs opacity-90">In Progress</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsMinimized(!isMinimized)}
+                className="hover:bg-red-800 p-1.5 rounded-lg transition-colors text-xl leading-none"
+              >
+                {isMinimized ? '□' : '−'}
+              </button>
+            </div>
+          </div>
+
+          {/* Transcript */}
+          {!isMinimized && (
+            <div className="h-96 overflow-y-auto p-4 space-y-3 bg-gray-50">
+              {transcript.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex gap-3 ${
+                    message.speaker === 'user' ? 'flex-row-reverse' : 'flex-row'
+                  }`}
+                >
+                  {/* Avatar */}
+                  <div
+                    className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                      message.speaker === 'user'
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-red-100'
+                    }`}
+                    style={
+                      message.speaker === 'agent' ? { color: '#C1001F' } : {}
+                    }
+                  >
+                    {message.speaker === 'user' ? (
+                      <User size={16} />
+                    ) : (
+                      <Bot size={16} />
+                    )}
+                  </div>
+
+                  {/* Message Bubble */}
+                  <div
+                    className={`flex-1 max-w-[75%] ${
+                      message.speaker === 'user' ? 'text-right' : 'text-left'
+                    }`}
+                  >
+                    <div
+                      className={`inline-block px-4 py-2 rounded-2xl ${
+                        message.speaker === 'user'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-white text-gray-900 border border-gray-200'
+                      }`}
+                    >
+                      <p className="text-sm leading-relaxed">{message.text}</p>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1 px-2">
+                      {message.timestamp.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              <div ref={transcriptEndRef} />
+            </div>
+          )}
+
+          {/* Call Status */}
+          {!isMinimized && (
+            <div className="p-3 border-t border-gray-200 bg-white rounded-b-2xl">
+              <div className="flex items-center justify-between text-xs text-gray-600">
+                <span>🎙️ {callStatus || 'Connected'}</span>
+                <span>Duration: {formatDuration(callDuration)}</span>
+              </div>
+            </div>
+          )}
+        </div>
       )}
-      
-      {callStatus && (
-        <p className="text-sm text-gray-600 animate-pulse">
-          {callStatus}
-        </p>
-      )}
-    </div>
+    </>
   );
 }
