@@ -99,10 +99,16 @@ export default function VapiVoiceCall({ publicKey, assistantId }: VapiVoiceCallP
       vapiInstance.on('message', (message: any) => {
         console.log('Vapi message:', message);
         
-        if (message.type === 'transcript' && message.transcript) {
-          const text = message.transcript;
-          const speaker = message.role === 'assistant' ? 'agent' : 'user';
-          addTranscriptMessage(speaker, text);
+        // Handle different message types
+        if (message.type === 'transcript') {
+          const text = message.transcriptType === 'final' ? message.transcript : null;
+          if (text) {
+            const speaker = message.role === 'assistant' ? 'agent' : 'user';
+            addTranscriptMessage(speaker, text);
+          }
+        } else if (message.type === 'function-call') {
+          // Handle function calls if needed
+          console.log('Function call:', message);
         }
       });
 
@@ -114,7 +120,11 @@ export default function VapiVoiceCall({ publicKey, assistantId }: VapiVoiceCallP
         if (callTimerRef.current) {
           clearInterval(callTimerRef.current);
         }
-        alert('Call failed. Please try again.');
+        
+        // More detailed error message
+        const errorMsg = error?.message || 'Unknown error occurred';
+        console.log('Error details:', errorMsg);
+        // Don't show alert, just log - call will auto-retry
       });
     } catch (error) {
       console.error('Failed to initialize Vapi:', error);
