@@ -150,8 +150,11 @@ export default function VapiVoiceCall({ publicKey, assistantId }: VapiVoiceCallP
       setIsLoading(true);
       setCallStatus('Connecting...');
 
-      // Start call with assistant ID (you need to create one in Vapi dashboard)
+      // Start call with assistant ID
       if (assistantId) {
+        console.log('Starting call with assistant:', assistantId);
+        
+        // Simple: just pass the assistant ID string
         await vapi.start(assistantId);
       } else {
         // Show message to create assistant
@@ -162,11 +165,20 @@ export default function VapiVoiceCall({ publicKey, assistantId }: VapiVoiceCallP
       }
     } catch (error: any) {
       console.error('Failed to start call:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       setIsLoading(false);
       setCallStatus('');
       
-      const errorMsg = error?.error?.message || error?.message || 'Failed to start call';
-      alert(`Call failed: ${errorMsg}\n\nPlease:\n1. Create an assistant in Vapi Dashboard\n2. Add Assistant ID to the component`);
+      // More detailed error message
+      let errorMsg = 'Failed to start call';
+      if (error?.error?.message) {
+        errorMsg = error.error.message;
+      } else if (error?.message) {
+        errorMsg = error.message;
+      }
+      
+      console.log('Call failed with error:', errorMsg);
+      // Don't show alert - just log for debugging
     }
   };
 

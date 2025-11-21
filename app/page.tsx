@@ -8,7 +8,7 @@ import locationsData from '@/data/us-locations.json';
 
 export default function Home() {
   const vapiPublicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || '';
-  const vapiAssistantId = '365fca0e-ff6a-42a0-a944-01f1dbb552fa';
+  const vapiAssistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID || '7ad8178f-2414-41b5-aaf7-064cc9186c09';
 
   // Form state
   const [formData, setFormData] = useState({
