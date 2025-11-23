@@ -7,8 +7,8 @@ import { useState, useEffect, useRef } from 'react';
 import locationsData from '@/data/us-locations.json';
 
 export default function Home() {
-  const vapiPublicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || '';
-  const vapiAssistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID || '7ad8178f-2414-41b5-aaf7-064cc9186c09';
+  const vapiPublicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || '8ae1c1a3-57a8-459e-98fa-421403422a95';
+  const vapiAssistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID || '34c63f21-7844-47b6-ba91-bca6b9512a21';
 
   // Form state
   const [formData, setFormData] = useState({

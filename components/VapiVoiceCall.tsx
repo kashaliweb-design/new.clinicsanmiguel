@@ -113,18 +113,31 @@ export default function VapiVoiceCall({ publicKey, assistantId }: VapiVoiceCallP
       });
 
       vapiInstance.on('error', (error: any) => {
-        console.error('Vapi error:', error);
+        console.error('Vapi error event:', error);
+        console.error('Error type:', error?.type);
+        console.error('Error stage:', error?.stage);
+        console.error('Error object:', JSON.stringify(error, null, 2));
+        
+        // Try to extract response if it's a Response object
+        if (error?.error instanceof Response) {
+          error.error.text().then((text: string) => {
+            console.error('Error response text:', text);
+            try {
+              const json = JSON.parse(text);
+              console.error('Error response JSON:', json);
+              alert(`Vapi API Error:\n${json.message || text}\n\nAssistant ID: ${assistantId}`);
+            } catch {
+              alert(`Vapi API Error:\n${text}\n\nAssistant ID: ${assistantId}`);
+            }
+          });
+        }
+        
         setIsCallActive(false);
         setIsLoading(false);
         setCallStatus('');
         if (callTimerRef.current) {
           clearInterval(callTimerRef.current);
         }
-        
-        // More detailed error message
-        const errorMsg = error?.message || 'Unknown error occurred';
-        console.log('Error details:', errorMsg);
-        // Don't show alert, just log - call will auto-retry
       });
     } catch (error) {
       console.error('Failed to initialize Vapi:', error);
@@ -166,6 +179,17 @@ export default function VapiVoiceCall({ publicKey, assistantId }: VapiVoiceCallP
     } catch (error: any) {
       console.error('Failed to start call:', error);
       console.error('Error details:', JSON.stringify(error, null, 2));
+      
+      // Try to get the actual response body
+      if (error?.error instanceof Response) {
+        error.error.json().then((body: any) => {
+          console.error('API Response Body:', body);
+          alert(`Vapi Error: ${body.message || JSON.stringify(body)}\n\nCheck console for details.`);
+        }).catch(() => {
+          console.error('Could not parse error response');
+        });
+      }
+      
       setIsLoading(false);
       setCallStatus('');
       
@@ -178,7 +202,8 @@ export default function VapiVoiceCall({ publicKey, assistantId }: VapiVoiceCallP
       }
       
       console.log('Call failed with error:', errorMsg);
-      // Don't show alert - just log for debugging
+      console.log('Assistant ID being used:', assistantId);
+      console.log('Public Key:', publicKey?.substring(0, 20) + '...');
     }
   };
 

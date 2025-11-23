@@ -104,6 +104,7 @@ export default function WebChat() {
         direction: 'inbound',
         message_body: inputMessage,
         from_number: patientPhone || null,
+        assistant_id: 'a4d4a9da-20f8-43df-9877-9ef1c22ba3bf',
       });
 
       // Simple AI response logic (you can integrate with OpenAI later)
@@ -124,6 +125,7 @@ export default function WebChat() {
         direction: 'outbound',
         message_body: response,
         to_number: patientPhone || null,
+        assistant_id: 'a4d4a9da-20f8-43df-9877-9ef1c22ba3bf',
       });
     } catch (error) {
       console.error('Error sending message:', error);
