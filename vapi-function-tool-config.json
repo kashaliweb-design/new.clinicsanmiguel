@@ -1,0 +1,64 @@
+{
+  "toolName": "bookAppointment",
+  "description": "Books a medical appointment for a patient. Use this when the patient wants to schedule a consultation, exam, or any medical service.",
+  "serverUrl": "https://YOUR-DOMAIN.vercel.app/api/vapi/book-appointment",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "patientName": {
+        "type": "string",
+        "description": "Full name of the patient"
+      },
+      "phoneNumber": {
+        "type": "string",
+        "description": "Patient's phone number with country code (e.g., +1234567890)"
+      },
+      "dateOfBirth": {
+        "type": "string",
+        "description": "Patient's date of birth in YYYY-MM-DD format"
+      },
+      "appointmentType": {
+        "type": "string",
+        "description": "Type of appointment",
+        "enum": [
+          "consultation",
+          "immigration_exam",
+          "primary_care",
+          "specialist",
+          "urgent_care"
+        ]
+      },
+      "appointmentDate": {
+        "type": "string",
+        "description": "Appointment date in YYYY-MM-DD format"
+      },
+      "appointmentTime": {
+        "type": "string",
+        "description": "Appointment time in HH:MM format (24-hour)"
+      },
+      "isNewPatient": {
+        "type": "boolean",
+        "description": "Whether this is a new patient or returning patient"
+      },
+      "address": {
+        "type": "string",
+        "description": "Patient's full address (optional)"
+      },
+      "email": {
+        "type": "string",
+        "description": "Patient's email address (optional)"
+      }
+    },
+    "required": [
+      "patientName",
+      "phoneNumber",
+      "appointmentDate",
+      "appointmentTime"
+    ]
+  },
+  "options": {
+    "async": true,
+    "strict": true
+  },
+  "assistantSystemPromptAddition": "When a patient wants to schedule an appointment:\n\n1. Greet them warmly\n2. Ask if they are a new or returning patient\n3. Collect required information:\n   - Full name\n   - Phone number\n   - Date of birth\n   - Preferred appointment date and time\n   - Type of appointment (consultation, immigration exam, etc.)\n4. For new patients, also collect:\n   - Email address\n   - Full address\n5. Use the bookAppointment function to create the appointment\n6. Confirm the appointment with the patient and provide the confirmation code\n7. Ask if they need anything else\n\nAlways be friendly, professional, and efficient."
+}
