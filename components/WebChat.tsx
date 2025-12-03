@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, X, Send, Loader2 } from 'lucide-react';
+import { MessageSquare, X, Send, Loader2, Phone } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface Message {
@@ -317,12 +317,21 @@ export default function WebChat() {
                   <p className="text-xs opacity-90">Online</p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="hover:bg-red-800 p-1.5 rounded-lg transition-colors"
-              >
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.open('tel:+14155551000', '_self')}
+                  className="hover:bg-red-800 p-1.5 rounded-lg transition-colors"
+                  aria-label="Call us"
+                >
+                  <Phone size={20} />
+                </button>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="hover:bg-red-800 p-1.5 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             {/* Messages */}
