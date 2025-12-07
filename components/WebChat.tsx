@@ -34,6 +34,8 @@ export default function WebChat() {
 
   const clinicOptions = [
     { label: "Schedule a consultation ($19)", key: "consultation" },
+    { label: "Reschedule an appointment", key: "reschedule" },
+    { label: "Cancel an appointment", key: "cancel" },
     { label: "Speak with a nurse", key: "nurse" },
     { label: "View lab results", key: "lab_results" },
     { label: "General questions", key: "general" },
@@ -169,6 +171,14 @@ export default function WebChat() {
         response = 'Please enter your ZIP code to find the nearest clinic.';
         setConversationState('find_clinic');
         break;
+      case 'reschedule':
+        response = 'I can help you reschedule your appointment. Please provide your phone number and confirmation code (or appointment details).';
+        setConversationState('reschedule_verify');
+        break;
+      case 'cancel':
+        response = 'I can help you cancel your appointment. Please provide your phone number and confirmation code (or appointment details).';
+        setConversationState('cancel_verify');
+        break;
     }
 
     const assistantMessage: Message = {
@@ -249,9 +259,46 @@ export default function WebChat() {
         return `Great! I've reserved your appointment. To confirm:\n\nYou're scheduled for ${appointmentData.appointmentType || 'an appointment'} on ${userInput}.\n\nPlease arrive 15 minutes early to complete any necessary paperwork. Bring your insurance card and photo ID.\n\nWould you like to receive a reminder call or text message before your appointment?`;
 
       case 'confirm_appointment':
-        setConversationState('initial');
-        const confirmationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-        return `Perfect! Your appointment is confirmed.\n\nConfirmation Code: ${confirmationCode}\n\nYou'll receive a confirmation via text/email shortly. Thank you for scheduling with Wellness Partners. Is there anything else I can help you with today?`;
+        // Book the appointment in the database
+        try {
+          const bookingResponse = await fetch('/api/chat/book-appointment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              patientName: appointmentData.patientInfo?.split(',')[0] || patientName || 'Guest',
+              phoneNumber: patientPhone || appointmentData.patientInfo?.match(/\d{10}/)?.[0] || '0000000000',
+              email: appointmentData.patientInfo?.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)?.[0] || null,
+              appointmentType: appointmentData.appointmentType || 'consultation',
+              appointmentDate: (() => {
+                const dateStr = appointmentData.selectedTime?.match(/\w+, \w+ \d+/)?.[0];
+                if (dateStr) {
+                  const parsedDate = new Date(dateStr + ', ' + new Date().getFullYear());
+                  return parsedDate.toISOString().split('T')[0];
+                }
+                return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+              })(),
+              appointmentTime: appointmentData.selectedTime?.match(/\d{1,2}:\d{2} [AP]M/)?.[0] || '10:00 AM',
+              isNewPatient: appointmentData.isNewPatient !== false,
+              notes: `Booked via web chat. Patient info: ${appointmentData.patientInfo || 'Not provided'}`,
+            }),
+          });
+
+          const bookingResult = await bookingResponse.json();
+          
+          if (bookingResult.success) {
+            setConversationState('initial');
+            return bookingResult.message + '\n\nYou\'ll receive a confirmation via text/email shortly. Thank you for scheduling with Wellness Partners. Is there anything else I can help you with today?';
+          } else {
+            setConversationState('initial');
+            return `I apologize, but there was an issue confirming your appointment: ${bookingResult.message}. Please try again or call us at (415) 555-1000.`;
+          }
+        } catch (error) {
+          console.error('Error booking appointment:', error);
+          setConversationState('initial');
+          return 'I apologize, but there was a technical issue confirming your appointment. Please try again or call us at (415) 555-1000.';
+        }
 
       case 'immigration_schedule':
         if (input.includes('yes') || input.includes('schedule')) {
@@ -260,6 +307,91 @@ export default function WebChat() {
         }
         setConversationState('initial');
         return 'No problem. If you have any other questions about the immigration medical exam, feel free to ask. How else can I help you today?';
+
+      case 'reschedule_verify':
+        setAppointmentData({ ...appointmentData, verificationInfo: userInput });
+        setConversationState('reschedule_new_date');
+        return 'Thank you. What would you like to reschedule to? Please provide your preferred date and time (e.g., "Monday, January 20th at 3:00 PM").';
+
+      case 'reschedule_new_date':
+        setAppointmentData({ ...appointmentData, newDateTime: userInput });
+        setConversationState('reschedule_reason');
+        return 'Got it. May I ask the reason for rescheduling? (Optional - you can skip this)';
+
+      case 'reschedule_reason':
+        try {
+          const phoneMatch = appointmentData.verificationInfo?.match(/\d{10}/);
+          const dateMatch = appointmentData.newDateTime?.match(/(\w+,\s+\w+\s+\d+)/);
+          const timeMatch = appointmentData.newDateTime?.match(/(\d{1,2}:\d{2}\s+[AP]M)/);
+          
+          if (!phoneMatch || !dateMatch || !timeMatch) {
+            setConversationState('initial');
+            return 'I\'m sorry, I couldn\'t find all the required information. Please try again or call us at (415) 555-1000.';
+          }
+
+          const newDate = new Date(dateMatch[1] + ', ' + new Date().getFullYear()).toISOString().split('T')[0];
+          
+          const rescheduleResponse = await fetch('/api/chat/reschedule-appointment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phoneNumber: phoneMatch[0],
+              newDate: newDate,
+              newTime: timeMatch[1],
+              reason: userInput || 'Not specified'
+            }),
+          });
+
+          const result = await rescheduleResponse.json();
+          setConversationState('initial');
+          
+          if (result.success) {
+            return result.message + '\n\nIs there anything else I can help you with?';
+          } else {
+            return `I apologize, but there was an issue: ${result.message}. Please try again or call us at (415) 555-1000.`;
+          }
+        } catch (error) {
+          console.error('Error rescheduling appointment:', error);
+          setConversationState('initial');
+          return 'I apologize, but there was a technical issue. Please try again or call us at (415) 555-1000.';
+        }
+
+      case 'cancel_verify':
+        setAppointmentData({ ...appointmentData, verificationInfo: userInput });
+        setConversationState('cancel_reason');
+        return 'I understand. May I ask the reason for cancellation? (This helps us improve our service)';
+
+      case 'cancel_reason':
+        try {
+          const phoneMatch = appointmentData.verificationInfo?.match(/\d{10}/);
+          
+          if (!phoneMatch) {
+            setConversationState('initial');
+            return 'I\'m sorry, I couldn\'t find your phone number. Please try again or call us at (415) 555-1000.';
+          }
+
+          const cancelResponse = await fetch('/api/chat/cancel-appointment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phoneNumber: phoneMatch[0],
+              reason: userInput || 'Not specified'
+            }),
+          });
+
+          const result = await cancelResponse.json();
+          setConversationState('initial');
+          
+          if (result.success) {
+            return result.message + '\n\nIs there anything else I can help you with?';
+          } else {
+            return `I apologize, but there was an issue: ${result.message}. Please try again or call us at (415) 555-1000.`;
+          }
+        } catch (error) {
+          console.error('Error cancelling appointment:', error);
+          setConversationState('initial');
+          return 'I apologize, but there was a technical issue. Please try again or call us at (415) 555-1000.';
+        }
 
       default:
         // General responses
