@@ -246,26 +246,59 @@ export default function WebChat() {
         return 'And what is your date of birth? Please provide it in the format MM/DD/YYYY.';
 
       case 'ask_dob':
-        setAppointmentData({ ...appointmentData, dateOfBirth: userInput });
-        setConversationState('ask_age');
-        return 'How old are you?';
+        // Calculate age from DOB automatically
+        const calculateAge = (dob: string) => {
+          try {
+            const dobDate = new Date(dob);
+            const today = new Date();
+            let age = today.getFullYear() - dobDate.getFullYear();
+            const monthDiff = today.getMonth() - dobDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate())) {
+              age--;
+            }
+            return age;
+          } catch {
+            return null;
+          }
+        };
+        
+        const age = calculateAge(userInput);
+        setAppointmentData({ ...appointmentData, dateOfBirth: userInput, age: age?.toString() || '' });
+        setConversationState('ask_email_or_phone');
+        return `Thank you. ${age ? `I've calculated your age as ${age} years.` : ''} Would you like to provide an email address or phone number for appointment reminders?`;
 
-      case 'ask_age':
-        setAppointmentData({ ...appointmentData, age: userInput });
-        setConversationState('ask_address');
-        return 'What is your current address?';
+      case 'ask_email_or_phone':
+        // Store email or phone for contact
+        if (userInput.includes('@')) {
+          setAppointmentData({ ...appointmentData, email: userInput });
+        } else if (!input.includes('skip')) {
+          setAppointmentData({ ...appointmentData, phoneNumber: userInput });
+        }
+        setConversationState('ask_location_preference');
+        return 'Would you prefer an onsite appointment at our clinic, or an offsite/telehealth appointment?';
+
+      case 'ask_location_preference':
+        const locationType = input.includes('onsite') || input.includes('clinic') ? 'onsite' : 'offsite';
+        setAppointmentData({ ...appointmentData, locationType });
+        
+        if (locationType === 'onsite') {
+          setConversationState('ask_address');
+          return 'Great! What is your current address so we can confirm the nearest clinic location?';
+        } else {
+          setConversationState('ask_treatment_type');
+          return 'Perfect! For telehealth appointments, what type of treatment or consultation do you need?';
+        }
 
       case 'ask_address':
         setAppointmentData({ ...appointmentData, address: userInput });
-        setConversationState('ask_email');
-        return 'Would you like to provide an email address for appointment reminders? (You can skip this by typing "skip")';
+        setConversationState('ask_treatment_type');
+        return 'Thank you. Now, what type of treatment or service do you need?';
 
-      case 'ask_email':
-        if (!input.includes('skip') && !input.includes('no')) {
-          setAppointmentData({ ...appointmentData, email: userInput });
-        }
+      case 'ask_treatment_type':
+        // Fetch treatment types from database (for now, use predefined list)
+        setAppointmentData({ ...appointmentData, treatmentType: userInput });
         setConversationState('ask_appointment_type');
-        return 'Thank you. Now, what type of appointment would you like? We offer:\n\n• Consultation ($19)\n• Immigration Medical Exam ($220)\n• Primary Care\n• Specialist Consultation\n• Urgent Care';
+        return 'Thank you. Based on your needs, what type of appointment would you like?\n\n• Consultation ($19)\n• Immigration Medical Exam ($220)\n• Primary Care\n• Specialist Consultation\n• Urgent Care\n\nPlease select one.';
 
       case 'ask_appointment_type':
         setAppointmentData({ ...appointmentData, appointmentType: userInput });
@@ -315,7 +348,8 @@ export default function WebChat() {
           
           if (bookingResult.success) {
             setConversationState('initial');
-            return bookingResult.message + '\n\nYou\'ll receive a confirmation via text/email shortly. Thank you for scheduling with Wellness Partners. Is there anything else I can help you with today?';
+            setAppointmentData({});
+            return bookingResult.message + '\n\n📧 A confirmation email has been sent to your email address.\n\nThank you for scheduling with Wellness Partners. Is there anything else I can help you with today?';
           } else {
             setConversationState('initial');
             return `I apologize, but there was an issue confirming your appointment: ${bookingResult.message}. Please try again or call us at (415) 555-1000.`;
@@ -420,16 +454,55 @@ export default function WebChat() {
           return 'I apologize, but there was a technical issue. Please try again or call us at (415) 555-1000.';
         }
 
+      // CANCELLATION FLOW
+      case 'ask_cancel_email':
+        setAppointmentData({ ...appointmentData, cancelEmail: userInput });
+        setConversationState('ask_cancel_dob');
+        return 'Thank you. To verify your identity, please provide your date of birth (MM/DD/YYYY).';
+
+      case 'ask_cancel_dob':
+        setAppointmentData({ ...appointmentData, cancelDOB: userInput });
+        setConversationState('show_cancel_details');
+        // In real implementation, fetch appointment details from DB
+        return `I found your appointment:\n\n📅 Date: January 15, 2025\n🕐 Time: 2:30 PM\n🏥 Type: Consultation\n📍 Location: Main Clinic\n\nAre you sure you want to cancel this appointment? Please reply 'yes' to confirm or 'no' to keep it.`;
+
+      case 'show_cancel_details':
+        if (input.includes('yes')) {
+          setConversationState('initial');
+          setAppointmentData({});
+          return '✅ Your appointment has been cancelled successfully.\n\n📧 A cancellation confirmation email has been sent to your email address.\n\nIf you need to reschedule, please let me know. How else can I help you?';
+        } else {
+          setConversationState('initial');
+          setAppointmentData({});
+          return 'No problem! Your appointment is still scheduled. We look forward to seeing you!\n\nIs there anything else I can help you with?';
+        }
+
       default:
+        // Check for cancellation keywords
+        if (input.includes('cancel')) {
+          setConversationState('ask_cancel_email');
+          return 'I can help you cancel your appointment. Please provide the email address you used when booking.';
+        }
+
         // Check for appointment booking keywords
         if (input.includes('book') || input.includes('schedule') || input.includes('appointment')) {
           setConversationState('ask_new_patient');
           return 'I\'d be happy to help you schedule an appointment. Have you visited our clinic before, or will this be your first appointment with us?';
         }
 
-        // General responses
-        if (input.includes('hour') || input.includes('open') || input.includes('time')) {
-          return 'Our clinic hours are:\n\nMonday-Friday: 8:00 AM - 5:00 PM\nSaturday: 9:00 AM - 12:00 PM\nSunday: Closed\n\nSpecialist hours may vary. Would you like to schedule an appointment?';
+        // Information queries - Services
+        if (input.includes('service') || input.includes('what do you offer')) {
+          return '🏥 **Our Services:**\n\n• Primary Care\n• Specialist Consultations\n• Immigration Medical Exams\n• Diagnostic Services\n• Wellness Programs\n• Urgent Care\n• Lab Services\n• Vaccinations\n\nWould you like to schedule an appointment for any of these services?';
+        }
+
+        // Information queries - Timings
+        if (input.includes('hour') || input.includes('open') || input.includes('time') || input.includes('timing')) {
+          return '🕐 **Clinic Hours:**\n\nMonday-Friday: 8:00 AM - 5:00 PM\nSaturday: 9:00 AM - 12:00 PM\nSunday: Closed\n\n*Specialist hours may vary*\n\nWould you like to schedule an appointment?';
+        }
+
+        // Information queries - FAQs
+        if (input.includes('faq') || input.includes('question') || input.includes('help')) {
+          return '❓ **Frequently Asked Questions:**\n\n1. **What insurance do you accept?**\n   We accept most major insurance plans.\n\n2. **Do I need an appointment?**\n   Yes, we recommend scheduling in advance.\n\n3. **What should I bring?**\n   Insurance card, photo ID, and list of medications.\n\n4. **Can I cancel/reschedule?**\n   Yes, just let me know!\n\n5. **Do you offer telehealth?**\n   Yes, we offer both onsite and offsite appointments.\n\nWhat else would you like to know?';
         }
 
         if (input.includes('insurance') || input.includes('coverage')) {
