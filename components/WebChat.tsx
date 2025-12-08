@@ -225,23 +225,47 @@ export default function WebChat() {
 
       case 'ask_new_patient':
         if (input.includes('new') || input.includes('first')) {
-          setConversationState('collect_new_patient_info');
-          return 'Great! Since this is your first visit, I\'ll need to collect some basic information. Please provide your full name, date of birth (MM/DD/YYYY), age, phone number, and address.';
+          setAppointmentData({ ...appointmentData, isNewPatient: true });
+          setConversationState('ask_name');
+          return 'Great! Since this is your first visit, I\'ll need to collect some basic information. May I have your full name please?';
         } else if (input.includes('return') || input.includes('been') || input.includes('yes')) {
-          setConversationState('collect_returning_patient_info');
-          return 'Welcome back! To access your record, may I have your full name, date of birth, and phone number?';
+          setAppointmentData({ ...appointmentData, isNewPatient: false });
+          setConversationState('ask_name');
+          return 'Welcome back! May I have your full name please?';
         }
         return 'Please let me know if this is your first visit or if you\'ve been to our clinic before.';
 
-      case 'collect_new_patient_info':
-        setAppointmentData({ ...appointmentData, patientInfo: userInput });
-        setConversationState('ask_appointment_type');
-        return 'Thank you. Now, what type of appointment are you looking to schedule today? We offer:\n\n• Primary Care (30-60 min)\n• Specialist Consultation (45-60 min)\n• Diagnostic Services (15-90 min)\n• Wellness Services (45-60 min)\n• Urgent Care (30 min)';
+      case 'ask_name':
+        setAppointmentData({ ...appointmentData, patientName: userInput });
+        setConversationState('ask_phone');
+        return `Thank you, ${userInput}. What's the best phone number to reach you?`;
 
-      case 'collect_returning_patient_info':
-        setAppointmentData({ ...appointmentData, patientInfo: userInput });
+      case 'ask_phone':
+        setAppointmentData({ ...appointmentData, phoneNumber: userInput });
+        setConversationState('ask_dob');
+        return 'And what is your date of birth? Please provide it in the format MM/DD/YYYY.';
+
+      case 'ask_dob':
+        setAppointmentData({ ...appointmentData, dateOfBirth: userInput });
+        setConversationState('ask_age');
+        return 'How old are you?';
+
+      case 'ask_age':
+        setAppointmentData({ ...appointmentData, age: userInput });
+        setConversationState('ask_address');
+        return 'What is your current address?';
+
+      case 'ask_address':
+        setAppointmentData({ ...appointmentData, address: userInput });
+        setConversationState('ask_email');
+        return 'Would you like to provide an email address for appointment reminders? (You can skip this by typing "skip")';
+
+      case 'ask_email':
+        if (!input.includes('skip') && !input.includes('no')) {
+          setAppointmentData({ ...appointmentData, email: userInput });
+        }
         setConversationState('ask_appointment_type');
-        return 'Thank you for verifying your information. What type of appointment would you like to schedule?';
+        return 'Thank you. Now, what type of appointment would you like? We offer:\n\n• Consultation ($19)\n• Immigration Medical Exam ($220)\n• Primary Care\n• Specialist Consultation\n• Urgent Care';
 
       case 'ask_appointment_type':
         setAppointmentData({ ...appointmentData, appointmentType: userInput });
@@ -267,9 +291,11 @@ export default function WebChat() {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              patientName: appointmentData.patientInfo?.split(',')[0] || patientName || 'Guest',
-              phoneNumber: patientPhone || appointmentData.patientInfo?.match(/\d{10}/)?.[0] || '0000000000',
-              email: appointmentData.patientInfo?.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)?.[0] || null,
+              patientName: appointmentData.patientName || patientName || 'Guest',
+              phoneNumber: appointmentData.phoneNumber || patientPhone || '0000000000',
+              email: appointmentData.email || null,
+              dateOfBirth: appointmentData.dateOfBirth || null,
+              address: appointmentData.address || null,
               appointmentType: appointmentData.appointmentType || 'consultation',
               appointmentDate: (() => {
                 const dateStr = appointmentData.selectedTime?.match(/\w+, \w+ \d+/)?.[0];
@@ -281,7 +307,7 @@ export default function WebChat() {
               })(),
               appointmentTime: appointmentData.selectedTime?.match(/\d{1,2}:\d{2} [AP]M/)?.[0] || '10:00 AM',
               isNewPatient: appointmentData.isNewPatient !== false,
-              notes: `Booked via web chat. Patient info: ${appointmentData.patientInfo || 'Not provided'}`,
+              notes: `Booked via web chat. Age: ${appointmentData.age || 'Not provided'}`,
             }),
           });
 
@@ -302,8 +328,9 @@ export default function WebChat() {
 
       case 'immigration_schedule':
         if (input.includes('yes') || input.includes('schedule')) {
-          setConversationState('collect_new_patient_info');
-          return 'Excellent. I\'ll need to collect some information to schedule your immigration medical exam. Please provide your full name, date of birth, phone number, and address.';
+          setAppointmentData({ ...appointmentData, appointmentType: 'immigration_exam', isNewPatient: true });
+          setConversationState('ask_name');
+          return 'Excellent. I\'ll need to collect some information to schedule your immigration medical exam. May I have your full name please?';
         }
         setConversationState('initial');
         return 'No problem. If you have any other questions about the immigration medical exam, feel free to ask. How else can I help you today?';
@@ -394,6 +421,12 @@ export default function WebChat() {
         }
 
       default:
+        // Check for appointment booking keywords
+        if (input.includes('book') || input.includes('schedule') || input.includes('appointment')) {
+          setConversationState('ask_new_patient');
+          return 'I\'d be happy to help you schedule an appointment. Have you visited our clinic before, or will this be your first appointment with us?';
+        }
+
         // General responses
         if (input.includes('hour') || input.includes('open') || input.includes('time')) {
           return 'Our clinic hours are:\n\nMonday-Friday: 8:00 AM - 5:00 PM\nSaturday: 9:00 AM - 12:00 PM\nSunday: Closed\n\nSpecialist hours may vary. Would you like to schedule an appointment?';
