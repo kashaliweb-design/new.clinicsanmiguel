@@ -76,9 +76,10 @@ export async function POST(request: NextRequest) {
 
       if (patientError) {
         console.error('Error creating patient:', patientError);
+        console.error('Patient error details:', JSON.stringify(patientError, null, 2));
         return NextResponse.json({
           success: false,
-          message: 'Failed to create patient record'
+          message: `Failed to create patient record: ${patientError.message || 'Unknown error'}`
         }, { status: 500 });
       }
 
@@ -87,19 +88,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 2: Get first available clinic
-    const { data: clinic } = await supabase
+    const { data: clinic, error: clinicError } = await supabase
       .from('clinics')
       .select('id')
       .eq('active', true)
       .limit(1)
       .single();
 
+    if (clinicError) {
+      console.error('Error fetching clinic:', clinicError);
+    }
+
     if (!clinic) {
+      console.error('No active clinic found in database');
       return NextResponse.json({
         success: false,
-        message: 'No active clinic found'
+        message: 'No active clinic found. Please contact support.'
       }, { status: 500 });
     }
+
+    console.log('Using clinic:', clinic.id);
 
     // Step 3: Create appointment
     // Convert 12-hour time format to 24-hour format
@@ -121,6 +129,14 @@ export async function POST(request: NextRequest) {
     
     const appointmentDateTime = `${appointmentDate}T${time24Hour}:00`;
     
+    console.log('Creating appointment with data:', {
+      patient_id: patientId,
+      clinic_id: clinic.id,
+      appointment_date: appointmentDateTime,
+      service_type: appointmentType || 'consultation',
+      status: 'scheduled'
+    });
+
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
       .insert({
@@ -138,11 +154,14 @@ export async function POST(request: NextRequest) {
 
     if (appointmentError) {
       console.error('Error creating appointment:', appointmentError);
+      console.error('Appointment error details:', JSON.stringify(appointmentError, null, 2));
       return NextResponse.json({
         success: false,
-        message: 'Failed to create appointment'
+        message: `Failed to create appointment: ${appointmentError.message || 'Unknown error'}`
       }, { status: 500 });
     }
+
+    console.log('Appointment created successfully:', appointment);
 
     // Step 4: Log interaction
     await supabase.from('interactions').insert({
