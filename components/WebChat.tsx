@@ -168,8 +168,8 @@ export default function WebChat() {
         setConversationState('immigration_schedule');
         break;
       case 'find_clinic':
-        response = 'Please enter your ZIP code to find the nearest clinic.';
         setConversationState('find_clinic');
+        response = 'I can help you find the nearest clinic. Please enter your ZIP code (5 digits).';
         break;
       case 'reschedule':
         response = 'I can help you reschedule your appointment. Please provide your phone number and confirmation code (or appointment details).';
