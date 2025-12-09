@@ -52,17 +52,35 @@ export async function POST(request: NextRequest) {
     if (existingPatient) {
       patientId = existingPatient.id;
       console.log('Existing patient found:', patientId);
+      
+      // Update patient info if provided
+      const updateData: any = {};
+      if (email) updateData.email = email;
+      if (dateOfBirth) updateData.date_of_birth = dateOfBirth;
+      
+      if (Object.keys(updateData).length > 0) {
+        await supabase
+          .from('patients')
+          .update(updateData)
+          .eq('id', patientId);
+      }
     } else {
+      // Parse patient name
+      const nameParts = patientName.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || firstName;
+      
       // Create new patient
       const { data: newPatient, error: patientError } = await supabase
         .from('patients')
         .insert({
-          name: patientName,
+          first_name: firstName,
+          last_name: lastName,
           phone: phoneNumber,
           date_of_birth: dateOfBirth || null,
           email: email || null,
-          address: address || null,
-          status: 'active',
+          consent_sms: true,
+          consent_voice: true,
           created_at: new Date().toISOString()
         })
         .select()
@@ -82,17 +100,58 @@ export async function POST(request: NextRequest) {
       console.log('New patient created:', patientId);
     }
 
-    // Step 2: Create appointment
-    const appointmentDateTime = `${appointmentDate} ${appointmentTime}`;
+    // Step 2: Get first available clinic
+    const { data: clinic } = await supabase
+      .from('clinics')
+      .select('id')
+      .eq('active', true)
+      .limit(1)
+      .single();
+
+    if (!clinic) {
+      return NextResponse.json({
+        result: {
+          success: false,
+          message: 'No active clinic found'
+        }
+      });
+    }
+
+    // Step 3: Create appointment
+    // Convert time format if needed
+    let time24Hour = appointmentTime;
+    const timeMatch = appointmentTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1]);
+      const minutes = timeMatch[2];
+      const period = timeMatch[3].toUpperCase();
+      
+      if (period === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (period === 'AM' && hours === 12) {
+        hours = 0;
+      }
+      
+      time24Hour = `${hours.toString().padStart(2, '0')}:${minutes}`;
+    }
+    
+    const appointmentDateTime = `${appointmentDate}T${time24Hour}:00`;
+    
+    // Generate confirmation code
+    const tempId = Date.now().toString().substring(5);
+    const confirmationCode = `VAPI-${tempId}`;
     
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
       .insert({
         patient_id: patientId,
-        appointment_type: appointmentType || 'consultation',
+        clinic_id: clinic.id,
+        service_type: appointmentType || 'consultation',
         appointment_date: appointmentDateTime,
-        status: 'scheduled',
+        status: 'confirmed',
+        confirmation_code: confirmationCode,
         notes: `Booked via Vapi voice call. ${isNewPatient ? 'New patient.' : 'Returning patient.'}`,
+        duration_minutes: 30,
         created_at: new Date().toISOString()
       })
       .select()
@@ -108,8 +167,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Step 3: Log interaction
+    // Step 4: Log interaction
     await supabase.from('interactions').insert({
+      session_id: `vapi-${Date.now()}`,
+      patient_id: patientId,
       channel: 'voice_call',
       direction: 'inbound',
       message_body: `Appointment booked: ${appointmentType} on ${appointmentDate} at ${appointmentTime}`,
@@ -123,10 +184,8 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString()
     });
 
-    // Generate confirmation code
-    const confirmationCode = `APT-${appointment.id.toString().padStart(6, '0')}`;
-
     console.log('Appointment created successfully:', appointment.id);
+    console.log('Confirmation code:', confirmationCode);
 
     // Return success response to Vapi
     return NextResponse.json({

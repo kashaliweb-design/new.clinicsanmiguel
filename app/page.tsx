@@ -75,6 +75,19 @@ export default function Home() {
     return zipRegex.test(zip);
   };
 
+  const validateHouseNumber = (house: string, state: string) => {
+    // Check if house number exists in our valid locations
+    const validLocations = Object.values(zipLookup).filter(loc => loc.state === state);
+    
+    if (validLocations.length > 0) {
+      const validHouses = validLocations.map(loc => loc.house.toLowerCase());
+      return validHouses.includes(house.trim().toLowerCase());
+    }
+    
+    // If state is not in our database, show invalid address
+    return false;
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -165,6 +178,8 @@ export default function Home() {
 
     if (!formData.house.trim()) {
       newErrors.house = 'House number is required';
+    } else if (!validateHouseNumber(formData.house, formData.state)) {
+      newErrors.house = 'Invalid address - Please enter a valid Texas location';
     }
 
     if (!formData.street.trim()) {
@@ -490,68 +505,6 @@ export default function Home() {
                   {errors.house && (
                     <p className="mt-1 text-sm text-red-500">{errors.house}</p>
                   )}
-                </div>
-
-                {/* Street / Road */}
-                <div className="mb-6">
-                  <label htmlFor="street" className="block text-sm font-semibold text-gray-700 mb-2">
-                    Street / Road <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="street"
-                    name="street"
-                    value={formData.street}
-                    onChange={handleInputChange}
-                    placeholder="Enter street name"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent ${ 
-                      errors.street ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.street && (
-                    <p className="mt-1 text-sm text-red-500">{errors.street}</p>
-                  )}
-                </div>
-
-                {/* City (Auto-filled) */}
-                <div className="mb-6">
-                  <label htmlFor="city" className="block text-sm font-semibold text-gray-700 mb-2">
-                    City
-                  </label>
-                  <input
-                    type="text"
-                    id="city"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    placeholder="Auto-filled from address"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50"
-                  />
-                </div>
-
-                {/* ZIP Code */}
-                <div className="mb-6">
-                  <label htmlFor="zipcode" className="block text-sm font-semibold text-gray-700 mb-2">
-                    ZIP Code <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="zipcode"
-                    name="zipcode"
-                    value={formData.zipcode}
-                    onChange={handleInputChange}
-                    placeholder="Enter 5-digit ZIP code"
-                    maxLength={5}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent ${ 
-                      errors.zipcode ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.zipcode && (
-                    <p className="mt-1 text-sm text-red-500">{errors.zipcode}</p>
-                  )}
-                  <p className="mt-1 text-xs text-gray-500">
-                    ⚡ Enter ZIP code to auto-fill address (17 Texas locations available)
-                  </p>
                 </div>
 
                 {/* Submit Buttons */}

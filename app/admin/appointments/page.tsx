@@ -215,9 +215,16 @@ export default function AppointmentsPage() {
                   <div className="text-xs text-gray-500 border-t pt-3 mt-3">{appointment.notes}</div>
                 )}
 
-                {/* Contact */}
-                <div className="text-xs text-gray-500 mt-3">
-                  {appointment.patients?.phone}
+                {/* Contact Info */}
+                <div className="border-t pt-3 mt-3">
+                  <div className="text-xs text-gray-500 mb-1">
+                    <span className="font-semibold">Phone:</span> {appointment.patients?.phone}
+                  </div>
+                  {appointment.patients?.email && (
+                    <div className="text-xs text-gray-500">
+                      <span className="font-semibold">Email:</span> {appointment.patients?.email}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

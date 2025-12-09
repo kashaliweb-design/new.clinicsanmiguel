@@ -129,12 +129,17 @@ export async function POST(request: NextRequest) {
     
     const appointmentDateTime = `${appointmentDate}T${time24Hour}:00`;
     
+    // Generate confirmation code
+    const tempId = Date.now().toString().substring(5);
+    const confirmationCode = `CHAT-${tempId}`;
+    
     console.log('Creating appointment with data:', {
       patient_id: patientId,
       clinic_id: clinic.id,
       appointment_date: appointmentDateTime,
       service_type: appointmentType || 'consultation',
-      status: 'scheduled'
+      status: 'confirmed',
+      confirmation_code: confirmationCode
     });
 
     const { data: appointment, error: appointmentError } = await supabase
@@ -144,7 +149,8 @@ export async function POST(request: NextRequest) {
         clinic_id: clinic.id,
         appointment_date: appointmentDateTime,
         service_type: appointmentType || 'consultation',
-        status: 'scheduled',
+        status: 'confirmed',
+        confirmation_code: confirmationCode,
         notes: notes || `Booked via web chat. ${isNewPatient ? 'New patient.' : 'Returning patient.'}`,
         duration_minutes: 30,
         created_at: new Date().toISOString()
@@ -179,10 +185,8 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString()
     });
 
-    // Generate confirmation code
-    const confirmationCode = `CHT-${appointment.id.toString().substring(0, 8).toUpperCase()}`;
-
     console.log('Appointment created successfully:', appointment.id);
+    console.log('Confirmation code:', confirmationCode);
 
     // Return success response
     return NextResponse.json({

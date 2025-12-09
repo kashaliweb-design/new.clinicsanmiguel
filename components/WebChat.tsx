@@ -35,12 +35,7 @@ export default function WebChat() {
   const clinicOptions = [
     { label: "Schedule a consultation ($19)", key: "consultation" },
     { label: "Reschedule an appointment", key: "reschedule" },
-    { label: "Cancel an appointment", key: "cancel" },
-    { label: "Speak with a nurse", key: "nurse" },
-    { label: "View lab results", key: "lab_results" },
-    { label: "General questions", key: "general" },
-    { label: "Immigration medical exam ($220)", key: "immigration" },
-    { label: "Find a clinic by ZIP code", key: "find_clinic" }
+    { label: "Cancel an appointment", key: "cancel" }
   ];
 
   const appointmentTypes = [
@@ -492,7 +487,7 @@ export default function WebChat() {
 
         // Information queries - Services
         if (input.includes('service') || input.includes('what do you offer')) {
-          return '🏥 **Our Services:**\n\n• Primary Care\n• Specialist Consultations\n• Immigration Medical Exams\n• Diagnostic Services\n• Wellness Programs\n• Urgent Care\n• Lab Services\n• Vaccinations\n\nWould you like to schedule an appointment for any of these services?';
+          return '🏥 **Our Services:**\n\n• Weight Loss Program\n• Wart Removal\n• Blood Tests\n• Seniors Care\n• Children Healthcare\n• Ear Cleaning\n• DOT Test\n• Thyroid Care\n• High Cholesterol and Triglycerides\n• Pregnancy Services\n• PSA Test\n• Ingrown Toenail Removal\n• School Physical\n• EKG\n• Ultrasound\n• Pap Smear\n• STD Test\n• Vitamin B-12\n• Diabetes Care\n• Abscess Drainage\n• Hypertension\n• Primary Care\n• Dentist\n• Immigration Medical Exams\n\nWould you like to schedule an appointment for any of these services?';
         }
 
         // Information queries - Timings
