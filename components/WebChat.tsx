@@ -35,7 +35,9 @@ export default function WebChat() {
   const clinicOptions = [
     { label: "Schedule a consultation ($19)", key: "consultation" },
     { label: "Reschedule an appointment", key: "reschedule" },
-    { label: "Cancel an appointment", key: "cancel" }
+    { label: "Cancel an appointment", key: "cancel" },
+    { label: "Delete an appointment", key: "delete" },
+    { label: "Ask a question", key: "question" }
   ];
 
   const appointmentTypes = [
@@ -171,8 +173,16 @@ export default function WebChat() {
         setConversationState('reschedule_verify');
         break;
       case 'cancel':
-        response = 'I can help you cancel your appointment. Please provide your phone number and confirmation code (or appointment details).';
+        response = 'I can help you cancel your appointment. Please provide your phone number or email and confirmation code.';
         setConversationState('cancel_verify');
+        break;
+      case 'delete':
+        response = 'I can help you permanently delete your appointment from our system. Please provide your phone number or email and confirmation code.';
+        setConversationState('delete_verify');
+        break;
+      case 'question':
+        response = 'I\'m here to answer your questions! You can ask me about:\n\n• Services we offer\n• Clinic hours and locations\n• Appointment costs and insurance\n• Immigration medical exams\n• Lab results\n• Any other questions\n\nWhat would you like to know?';
+        setConversationState('answering_questions');
         break;
     }
 
@@ -420,23 +430,28 @@ export default function WebChat() {
       case 'cancel_reason':
         try {
           const phoneMatch = appointmentData.verificationInfo?.match(/\d{10}/);
+          const emailMatch = appointmentData.verificationInfo?.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+          const codeMatch = appointmentData.verificationInfo?.match(/[A-Z]+-\d+/);
           
-          if (!phoneMatch) {
+          if (!phoneMatch && !emailMatch) {
             setConversationState('initial');
-            return 'I\'m sorry, I couldn\'t find your phone number. Please try again or call us at (415) 555-1000.';
+            return 'I\'m sorry, I couldn\'t find your phone number or email. Please try again or call us at (415) 555-1000.';
           }
 
           const cancelResponse = await fetch('/api/chat/cancel-appointment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              phoneNumber: phoneMatch[0],
+              phoneNumber: phoneMatch ? phoneMatch[0] : undefined,
+              email: emailMatch ? emailMatch[0] : undefined,
+              confirmationCode: codeMatch ? codeMatch[0] : undefined,
               reason: userInput || 'Not specified'
             }),
           });
 
           const result = await cancelResponse.json();
           setConversationState('initial');
+          setAppointmentData({});
           
           if (result.success) {
             return result.message + '\n\nIs there anything else I can help you with?';
@@ -445,6 +460,49 @@ export default function WebChat() {
           }
         } catch (error) {
           console.error('Error cancelling appointment:', error);
+          setConversationState('initial');
+          return 'I apologize, but there was a technical issue. Please try again or call us at (415) 555-1000.';
+        }
+
+      // DELETE APPOINTMENT FLOW
+      case 'delete_verify':
+        setAppointmentData({ ...appointmentData, verificationInfo: userInput });
+        setConversationState('delete_reason');
+        return 'I understand you want to permanently delete your appointment. May I ask the reason? (This helps us improve our service)';
+
+      case 'delete_reason':
+        try {
+          const phoneMatch = appointmentData.verificationInfo?.match(/\d{10}/);
+          const emailMatch = appointmentData.verificationInfo?.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+          const codeMatch = appointmentData.verificationInfo?.match(/[A-Z]+-\d+/);
+          
+          if (!phoneMatch && !emailMatch) {
+            setConversationState('initial');
+            return 'I\'m sorry, I couldn\'t find your phone number or email. Please try again or call us at (415) 555-1000.';
+          }
+
+          const deleteResponse = await fetch('/api/chat/delete-appointment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phoneNumber: phoneMatch ? phoneMatch[0] : undefined,
+              email: emailMatch ? emailMatch[0] : undefined,
+              confirmationCode: codeMatch ? codeMatch[0] : undefined,
+              reason: userInput || 'Not specified'
+            }),
+          });
+
+          const result = await deleteResponse.json();
+          setConversationState('initial');
+          setAppointmentData({});
+          
+          if (result.success) {
+            return result.message + '\n\nIf you need to book a new appointment in the future, I\'m here to help. Is there anything else I can assist you with?';
+          } else {
+            return `I apologize, but there was an issue: ${result.message}. Please try again or call us at (415) 555-1000.`;
+          }
+        } catch (error) {
+          console.error('Error deleting appointment:', error);
           setConversationState('initial');
           return 'I apologize, but there was a technical issue. Please try again or call us at (415) 555-1000.';
         }
@@ -472,11 +530,22 @@ export default function WebChat() {
           return 'No problem! Your appointment is still scheduled. We look forward to seeing you!\n\nIs there anything else I can help you with?';
         }
 
+      case 'answering_questions':
+        // Stay in question mode and provide detailed answers
+        setConversationState('answering_questions');
+        // Fall through to default handling
+        
       default:
+        // Check for delete keywords
+        if (input.includes('delete')) {
+          setConversationState('delete_verify');
+          return 'I can help you permanently delete your appointment. Please provide your phone number or email and confirmation code.';
+        }
+        
         // Check for cancellation keywords
         if (input.includes('cancel')) {
-          setConversationState('ask_cancel_email');
-          return 'I can help you cancel your appointment. Please provide the email address you used when booking.';
+          setConversationState('cancel_verify');
+          return 'I can help you cancel your appointment. Please provide your phone number or email and confirmation code.';
         }
 
         // Check for appointment booking keywords
