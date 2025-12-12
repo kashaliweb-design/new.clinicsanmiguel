@@ -39,7 +39,7 @@ export default function WebChat() {
         {
           id: '1',
           role: 'assistant',
-          content: 'Thank you for calling Wellness Partners. This is Riley, your scheduling assistant. How may I help you today?',
+          content: '👋 Hi! I\'m Riley from Clinica San Miguel. How can I help you today?',
           timestamp: new Date(),
         },
       ]);
