@@ -637,24 +637,24 @@ export default function WebChat() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
               {messages.map((message, index) => (
                 <div key={message.id}>
                   <div
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-xl px-3 py-2 ${
+                      className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                         message.role === 'user'
-                          ? 'text-white'
-                          : 'bg-white text-gray-900 shadow-sm border border-gray-200'
+                          ? 'text-white rounded-br-sm'
+                          : 'bg-white text-gray-900 shadow-sm border border-gray-200 rounded-bl-sm'
                       }`}
                       style={message.role === 'user' ? {backgroundColor: '#C1001F'} : {}}
                     >
-                      <p className="whitespace-pre-line text-xs leading-relaxed">{message.content}</p>
+                      <p className="whitespace-pre-line text-sm leading-relaxed text-left">{message.content}</p>
                       <p
-                        className={`text-xs mt-1 ${
-                          message.role === 'user' ? 'text-primary-100' : 'text-gray-500'
+                        className={`text-[10px] mt-1.5 text-left ${
+                          message.role === 'user' ? 'text-red-100' : 'text-gray-400'
                         }`}
                       >
                         {message.timestamp.toLocaleTimeString([], {
