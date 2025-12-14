@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getServiceSupabase } from '@/lib/supabase';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 interface AppointmentIntent {
   action: 'book' | 'confirm' | 'cancel' | 'reschedule' | 'none';
@@ -13,6 +12,18 @@ interface AppointmentIntent {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check for required environment variables
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({
+        success: false,
+        message: 'OpenAI API key is not configured. Please contact support.',
+      }, { status: 500 });
+    }
+
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
     const { messages, conversationState, appointmentData, patientPhone, sessionId } = await request.json();
 
     const systemPrompt = `You are Riley, a friendly scheduling assistant for Clinica San Miguel.
