@@ -89,24 +89,105 @@ Respond with ONLY ONE WORD: book, confirm, cancel, reschedule, or none`;
 
     if (intent === 'book' && appointmentData?.patientName && appointmentData?.phoneNumber && appointmentData?.appointmentDate && appointmentData?.appointmentTime) {
       try {
-        const bookResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/chat/book-appointment`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            patientName: appointmentData.patientName,
-            phoneNumber: appointmentData.phoneNumber,
-            email: appointmentData.email,
-            dateOfBirth: appointmentData.dateOfBirth,
-            appointmentType: appointmentData.appointmentType || 'consultation',
-            appointmentDate: appointmentData.appointmentDate,
-            appointmentTime: appointmentData.appointmentTime,
-            isNewPatient: appointmentData.isNewPatient !== false,
-            notes: appointmentData.notes,
-          }),
-        });
-        appointmentResult = await bookResponse.json();
+        const bookingData = {
+          patientName: appointmentData.patientName,
+          phoneNumber: appointmentData.phoneNumber,
+          email: appointmentData.email,
+          dateOfBirth: appointmentData.dateOfBirth,
+          appointmentType: appointmentData.appointmentType || 'consultation',
+          appointmentDate: appointmentData.appointmentDate,
+          appointmentTime: appointmentData.appointmentTime,
+          isNewPatient: appointmentData.isNewPatient !== false,
+          notes: appointmentData.notes,
+        };
+
+        const nameParts = bookingData.patientName.trim().split(' ');
+        const firstName = nameParts[0];
+        const lastName = nameParts.slice(1).join(' ') || firstName;
+
+        let patientId;
+        const { data: existingPatient } = await supabase
+          .from('patients')
+          .select('id')
+          .eq('phone', bookingData.phoneNumber)
+          .single();
+
+        if (existingPatient) {
+          patientId = existingPatient.id;
+          const updateData: any = {};
+          if (bookingData.email) updateData.email = bookingData.email;
+          if (bookingData.dateOfBirth) updateData.date_of_birth = bookingData.dateOfBirth;
+          if (Object.keys(updateData).length > 0) {
+            await supabase.from('patients').update(updateData).eq('id', patientId);
+          }
+        } else {
+          const { data: newPatient } = await supabase
+            .from('patients')
+            .insert({
+              first_name: firstName,
+              last_name: lastName,
+              phone: bookingData.phoneNumber,
+              date_of_birth: bookingData.dateOfBirth || null,
+              email: bookingData.email || null,
+              consent_sms: true,
+              consent_voice: false,
+              created_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+          if (newPatient) patientId = newPatient.id;
+        }
+
+        const { data: clinic } = await supabase
+          .from('clinics')
+          .select('id')
+          .eq('active', true)
+          .limit(1)
+          .single();
+
+        if (clinic && patientId) {
+          let time24Hour = bookingData.appointmentTime;
+          const timeMatch = bookingData.appointmentTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+          if (timeMatch) {
+            let hours = parseInt(timeMatch[1]);
+            const minutes = timeMatch[2];
+            const period = timeMatch[3].toUpperCase();
+            if (period === 'PM' && hours !== 12) hours += 12;
+            else if (period === 'AM' && hours === 12) hours = 0;
+            time24Hour = `${hours.toString().padStart(2, '0')}:${minutes}`;
+          }
+
+          const appointmentDateTime = `${bookingData.appointmentDate}T${time24Hour}:00`;
+          const confirmationCode = `CHAT-${Date.now().toString().substring(5)}`;
+
+          const { data: appointment } = await supabase
+            .from('appointments')
+            .insert({
+              patient_id: patientId,
+              clinic_id: clinic.id,
+              appointment_date: appointmentDateTime,
+              service_type: bookingData.appointmentType || 'consultation',
+              status: 'confirmed',
+              confirmation_code: confirmationCode,
+              notes: bookingData.notes || `Booked via web chat.`,
+              duration_minutes: 30,
+              created_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+          if (appointment) {
+            appointmentResult = {
+              success: true,
+              message: `Perfect! Your appointment has been confirmed. Your confirmation code is ${confirmationCode}. You're scheduled for ${bookingData.appointmentType || 'consultation'} on ${bookingData.appointmentDate} at ${bookingData.appointmentTime}.`,
+              appointmentId: appointment.id,
+              confirmationCode: confirmationCode,
+              patientId: patientId,
+            };
+          }
+        }
         
-        if (sessionId) {
+        if (sessionId && appointmentResult) {
           await supabase.from('interactions').insert({
             session_id: sessionId,
             patient_id: appointmentResult.patientId,
@@ -128,17 +209,44 @@ Respond with ONLY ONE WORD: book, confirm, cancel, reschedule, or none`;
       }
     } else if (intent === 'confirm' && (appointmentData?.confirmationCode || appointmentData?.phoneNumber)) {
       try {
-        const confirmResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/appointments/confirm`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            confirmationCode: appointmentData.confirmationCode,
-            appointmentId: appointmentData.appointmentId,
-          }),
-        });
-        appointmentResult = await confirmResponse.json();
+        let query = supabase.from('appointments').select('*, patients(*), clinics(*)');
+        if (appointmentData.confirmationCode) {
+          query = query.eq('confirmation_code', appointmentData.confirmationCode.toUpperCase());
+        } else if (appointmentData.appointmentId) {
+          query = query.eq('id', appointmentData.appointmentId);
+        }
+
+        const { data: appointments } = await query;
+        if (appointments && appointments.length > 0) {
+          const appointment = appointments[0];
+          if (appointment.status !== 'confirmed') {
+            const { data: updatedAppointment } = await supabase
+              .from('appointments')
+              .update({
+                status: 'confirmed',
+                confirmed_at: new Date().toISOString(),
+              })
+              .eq('id', appointment.id)
+              .select('*, patients(*), clinics(*)')
+              .single();
+
+            if (updatedAppointment) {
+              appointmentResult = {
+                success: true,
+                message: 'Appointment confirmed successfully',
+                appointment: updatedAppointment,
+              };
+            }
+          } else {
+            appointmentResult = {
+              success: true,
+              message: 'Appointment already confirmed',
+              appointment: appointment,
+            };
+          }
+        }
         
-        if (sessionId && appointmentResult.appointment) {
+        if (sessionId && appointmentResult && appointmentResult.appointment) {
           await supabase.from('interactions').insert({
             session_id: sessionId,
             patient_id: appointmentResult.appointment.patient_id,
@@ -159,35 +267,119 @@ Respond with ONLY ONE WORD: book, confirm, cancel, reschedule, or none`;
       }
     } else if (intent === 'cancel' && appointmentData?.phoneNumber && (appointmentData?.confirmationCode || appointmentData?.appointmentId)) {
       try {
-        const cancelResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/chat/cancel-appointment`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phoneNumber: appointmentData.phoneNumber,
-            confirmationCode: appointmentData.confirmationCode,
-            appointmentId: appointmentData.appointmentId,
-            reason: appointmentData.reason || 'Cancelled via chat',
-          }),
-        });
-        appointmentResult = await cancelResponse.json();
+        const { data: patient } = await supabase
+          .from('patients')
+          .select('id')
+          .eq('phone', appointmentData.phoneNumber)
+          .single();
+
+        if (patient) {
+          let appointment;
+          if (appointmentData.appointmentId) {
+            const { data } = await supabase
+              .from('appointments')
+              .select('*')
+              .eq('id', appointmentData.appointmentId)
+              .eq('patient_id', patient.id)
+              .single();
+            appointment = data;
+          } else if (appointmentData.confirmationCode) {
+            const { data } = await supabase
+              .from('appointments')
+              .select('*')
+              .eq('patient_id', patient.id)
+              .eq('confirmation_code', appointmentData.confirmationCode)
+              .single();
+            appointment = data;
+          }
+
+          if (appointment && appointment.status !== 'cancelled') {
+            const { data: cancelledAppointment } = await supabase
+              .from('appointments')
+              .update({
+                status: 'cancelled',
+                notes: `${appointment.notes || ''}\n\nCancelled via web chat. Reason: ${appointmentData.reason || 'Not specified'}`,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', appointment.id)
+              .select()
+              .single();
+
+            if (cancelledAppointment) {
+              appointmentResult = {
+                success: true,
+                message: `Your appointment has been successfully cancelled. If you'd like to reschedule, please let me know.`,
+                appointmentId: appointment.id,
+              };
+            }
+          }
+        }
       } catch (error) {
         console.error('Error cancelling appointment:', error);
       }
     } else if (intent === 'reschedule' && appointmentData?.phoneNumber && (appointmentData?.confirmationCode || appointmentData?.appointmentId) && appointmentData?.newDate && appointmentData?.newTime) {
       try {
-        const rescheduleResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/chat/reschedule-appointment`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phoneNumber: appointmentData.phoneNumber,
-            confirmationCode: appointmentData.confirmationCode,
-            appointmentId: appointmentData.appointmentId,
-            newDate: appointmentData.newDate,
-            newTime: appointmentData.newTime,
-            reason: appointmentData.reason,
-          }),
-        });
-        appointmentResult = await rescheduleResponse.json();
+        const { data: patient } = await supabase
+          .from('patients')
+          .select('id')
+          .eq('phone', appointmentData.phoneNumber)
+          .single();
+
+        if (patient) {
+          let appointment;
+          if (appointmentData.appointmentId) {
+            const { data } = await supabase
+              .from('appointments')
+              .select('*')
+              .eq('id', appointmentData.appointmentId)
+              .eq('patient_id', patient.id)
+              .single();
+            appointment = data;
+          } else if (appointmentData.confirmationCode) {
+            const { data } = await supabase
+              .from('appointments')
+              .select('*')
+              .eq('patient_id', patient.id)
+              .eq('confirmation_code', appointmentData.confirmationCode)
+              .single();
+            appointment = data;
+          }
+
+          if (appointment && appointment.status !== 'cancelled' && appointment.status !== 'completed') {
+            let time24Hour = appointmentData.newTime;
+            const timeMatch = appointmentData.newTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+            if (timeMatch) {
+              let hours = parseInt(timeMatch[1]);
+              const minutes = timeMatch[2];
+              const period = timeMatch[3].toUpperCase();
+              if (period === 'PM' && hours !== 12) hours += 12;
+              else if (period === 'AM' && hours === 12) hours = 0;
+              time24Hour = `${hours.toString().padStart(2, '0')}:${minutes}`;
+            }
+
+            const newAppointmentDate = `${appointmentData.newDate}T${time24Hour}:00`;
+            const { data: updatedAppointment } = await supabase
+              .from('appointments')
+              .update({
+                appointment_date: newAppointmentDate,
+                status: 'scheduled',
+                notes: `${appointment.notes || ''}\n\nRescheduled via web chat: ${appointmentData.reason || 'Not specified'}`,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', appointment.id)
+              .select()
+              .single();
+
+            if (updatedAppointment) {
+              appointmentResult = {
+                success: true,
+                message: `Your appointment has been successfully rescheduled to ${appointmentData.newDate} at ${appointmentData.newTime}. You'll receive a confirmation shortly.`,
+                appointmentId: appointment.id,
+                newDate: newAppointmentDate,
+              };
+            }
+          }
+        }
       } catch (error) {
         console.error('Error rescheduling appointment:', error);
       }
