@@ -29,56 +29,24 @@ export async function POST(request: NextRequest) {
     const systemPrompt = `You are Riley, a friendly scheduling assistant for Clinica San Miguel.
 
 RESPONSE STYLE - CRITICAL:
-• Keep responses SHORT (2-3 sentences max)
-• Use emojis sparingly for visual appeal (✅ 📅 🏥 💰)
-• Break long info into bullet points
+• Keep responses SHORT (1-2 sentences max)
+• Use emojis sparingly (✅ 📅 🏥 💰)
 • Ask ONE question at a time
-• Be conversational and warm, not robotic
+• Be conversational and warm
 
 KEY INFO:
 💰 Consultation: $19 | Immigration Exam: $220
 🕐 Hours: Mon-Fri 8am-5pm, Sat 9am-12pm
 🏥 Services: Primary Care, Specialist, Urgent Care, Immigration Exams, Diagnostics, Wellness
 
-LOCATIONS (by ZIP):
-Dallas: 75203, 75220, 75218 | Arlington: 76010
-Houston: 77545, 77015, 77067, 77084, 77036, 77386, 77502
-San Antonio: 78221, 78217, 78216 | Fort Worth: 76114, 76115
-Farmers Branch: 75234
+LOCATIONS: Dallas, Arlington, Houston, San Antonio, Fort Worth, Farmers Branch
 
 Current state: ${conversationState || 'initial'}
 ${appointmentData ? `Data: ${JSON.stringify(appointmentData)}` : ''}
 
-BOOKING FLOW: Ask for info one step at a time (name → phone → DOB → email → location → service → date/time).
+BOOKING FLOW: Ask for info one step at a time (name → phone → date → time).
 
-When user wants to:
-- BOOK: Collect name, phone, DOB (optional), email (optional), service type, date, time
-- CONFIRM: Ask for confirmation code or phone number
-- CANCEL: Ask for confirmation code or phone number and reason
-- RESCHEDULE: Ask for confirmation code or phone number, new date, and new time
-
-Remember: SHORT, FRIENDLY, ONE QUESTION AT A TIME!`;
-
-    const intentDetectionPrompt = `Based on the conversation, determine if the user wants to:
-- book (schedule a new appointment)
-- confirm (confirm an existing appointment)
-- cancel (cancel an appointment)
-- reschedule (change appointment date/time)
-- none (just asking questions or chatting)
-
-Conversation:
-${messages.map((m: any) => `${m.role}: ${m.content}`).join('\n')}
-
-Respond with ONLY ONE WORD: book, confirm, cancel, reschedule, or none`;
-
-    const intentCompletion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: intentDetectionPrompt }],
-      temperature: 0.3,
-      max_tokens: 10,
-    });
-
-    const intent = intentCompletion.choices[0].message.content?.toLowerCase().trim() || 'none';
+Remember: SHORT, FRIENDLY, ONE QUESTION!`;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -90,10 +58,23 @@ Respond with ONLY ONE WORD: book, confirm, cancel, reschedule, or none`;
         })),
       ],
       temperature: 0.7,
-      max_tokens: 200,
+      max_tokens: 150,
     });
 
     const assistantMessage = completion.choices[0].message.content;
+
+    const lastUserMessage = messages[messages.length - 1]?.content?.toLowerCase() || '';
+    let intent = 'none';
+    
+    if (lastUserMessage.includes('book') || lastUserMessage.includes('schedule') || lastUserMessage.includes('appointment')) {
+      intent = 'book';
+    } else if (lastUserMessage.includes('confirm')) {
+      intent = 'confirm';
+    } else if (lastUserMessage.includes('cancel')) {
+      intent = 'cancel';
+    } else if (lastUserMessage.includes('reschedule') || lastUserMessage.includes('change')) {
+      intent = 'reschedule';
+    }
 
     const supabase = getServiceSupabase();
     let appointmentResult = null;

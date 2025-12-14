@@ -143,7 +143,7 @@ export default function WebChat() {
         interactionData.patient_id = patientId;
       }
 
-      await supabase.from('interactions').insert(interactionData);
+      void supabase.from('interactions').insert(interactionData);
 
       const openaiResponse = await fetch('/api/chat/openai', {
         method: 'POST',
@@ -204,7 +204,7 @@ export default function WebChat() {
         outboundInteractionData.patient_id = patientId || result.appointmentResult?.patientId;
       }
 
-      await supabase.from('interactions').insert(outboundInteractionData);
+      void supabase.from('interactions').insert(outboundInteractionData);
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = {
