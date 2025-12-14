@@ -15,17 +15,17 @@ export async function POST(request: NextRequest) {
 
     // Handle different Vapi events
     if (eventType === 'end-of-call-report' || messageType === 'end-of-call-report') {
-      await handleCallEnd(body);
+      await handleCallEnd(supabase, body);
     } else if (eventType === 'status-update' || messageType === 'status-update') {
       if (body.message?.status === 'started') {
-        await handleCallStart(body);
+        await handleCallStart(supabase, body);
       }
     } else if (eventType === 'conversation-update' || messageType === 'conversation-update') {
-      await handleConversationUpdate(body);
+      await handleConversationUpdate(supabase, body);
     } else if (eventType === 'speech-update' || messageType === 'speech-update') {
-      await handleSpeechUpdate(body);
+      await handleSpeechUpdate(supabase, body);
     } else if (eventType === 'transcript' || messageType === 'transcript') {
-      await handleTranscript(body.call, body.transcript || body.message);
+      await handleTranscript(supabase, body.call, body.transcript || body.message);
     } else if (eventType === 'function-call' || messageType === 'function-call') {
       console.log('Function call received:', body);
     } else {
