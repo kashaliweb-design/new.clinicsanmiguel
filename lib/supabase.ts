@@ -7,11 +7,25 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Server-side client with service role (for API routes)
 export const getServiceSupabase = () => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
+  
+  if (!url || url === 'https://placeholder.supabase.co') {
+    console.error('NEXT_PUBLIC_SUPABASE_URL is not properly configured');
+    throw new Error('Supabase URL is not configured. Please check your environment variables.');
   }
-  return createClient(supabaseUrl, serviceRoleKey);
+  
+  if (!serviceRoleKey) {
+    console.error('SUPABASE_SERVICE_ROLE_KEY is not set in environment variables');
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set. Please add it to your .env.local file.');
+  }
+  
+  return createClient(url, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
 };
 
 // Database types
