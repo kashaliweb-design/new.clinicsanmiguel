@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
+
+const supabase = getServiceSupabase();
 
 export async function POST(request: NextRequest) {
   try {
