@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 
-const supabase = getServiceSupabase();
-
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getServiceSupabase();
     const body = await request.json();
     console.log('Vapi webhook received:', JSON.stringify(body, null, 2));
     
@@ -51,7 +50,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleCallStart(data: any) {
+async function handleCallStart(supabase: any, data: any) {
   const { call, message } = data;
   const callData = call || message?.call;
   const callId = callData?.id;
