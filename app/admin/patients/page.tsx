@@ -64,23 +64,20 @@ export default function PatientsPage() {
 
   const loadPatients = async () => {
     try {
+      setLoading(true);
       setError(null);
-      const { data, error: supabaseError } = await supabase
-        .from('patients')
-        .select('*')
-        .order('created_at', { ascending: false });
 
-      if (supabaseError) {
-        console.error('Supabase error:', supabaseError);
-        setError(`Database error: ${supabaseError.message}`);
-        throw supabaseError;
+      const response = await fetch('/api/admin/patients');
+      const result = await response.json();
+
+      if (result.success) {
+        setPatients(result.data || []);
+      } else {
+        throw new Error(result.message || 'Failed to load patients');
       }
-      
-      console.log('Loaded patients:', data?.length || 0);
-      setPatients(data || []);
-    } catch (error: any) {
-      console.error('Error loading patients:', error);
-      setError(error.message || 'Failed to load patients');
+    } catch (err: any) {
+      console.error('Error loading patients:', err);
+      setError(err.message || 'Failed to load patients');
     } finally {
       setLoading(false);
     }
