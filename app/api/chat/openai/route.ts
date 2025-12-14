@@ -386,6 +386,54 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
       }
     }
 
+    // Log inbound interaction (user message)
+    if (sessionId && messages.length > 0) {
+      const lastUserMessage = messages[messages.length - 1];
+      try {
+        await supabase.from('interactions').insert({
+          session_id: sessionId,
+          patient_id: appointmentResult?.patientId || null,
+          channel: 'web_chat',
+          direction: 'inbound',
+          message_body: lastUserMessage.content,
+          from_number: patientPhone || appointmentData?.phoneNumber || null,
+          intent: intent !== 'none' ? intent : null,
+          metadata: {
+            appointment_data: appointmentData,
+            source: 'web_chat',
+          },
+          created_at: new Date().toISOString(),
+        });
+        console.log('✅ Inbound interaction logged');
+      } catch (error) {
+        console.error('Error logging inbound interaction:', error);
+      }
+    }
+
+    // Log outbound interaction (assistant response)
+    if (sessionId) {
+      try {
+        await supabase.from('interactions').insert({
+          session_id: sessionId,
+          patient_id: appointmentResult?.patientId || null,
+          channel: 'web_chat',
+          direction: 'outbound',
+          message_body: appointmentResult?.message || assistantMessage,
+          to_number: patientPhone || appointmentData?.phoneNumber || null,
+          intent: intent !== 'none' ? intent : null,
+          metadata: {
+            appointment_result: appointmentResult,
+            intent: intent,
+            source: 'web_chat',
+          },
+          created_at: new Date().toISOString(),
+        });
+        console.log('✅ Outbound interaction logged');
+      } catch (error) {
+        console.error('Error logging outbound interaction:', error);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: appointmentResult?.message || assistantMessage,

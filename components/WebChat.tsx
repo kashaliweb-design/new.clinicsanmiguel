@@ -199,21 +199,7 @@ export default function WebChat() {
         interactionData.patient_id = patientId;
       }
 
-      fetch('/api/chat/log-interaction', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(interactionData),
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            console.log('✅ Inbound interaction logged:', data.data?.id);
-          } else {
-            console.error('❌ Failed to log inbound interaction:', data.message);
-          }
-        })
-        .catch(err => console.error('❌ Interaction log error:', err));
-
+      // Interactions will be logged by the OpenAI route
       const openaiResponse = await fetch('/api/chat/openai', {
         method: 'POST',
         headers: {
@@ -273,20 +259,8 @@ export default function WebChat() {
         outboundInteractionData.patient_id = patientId || result.appointmentResult?.patientId;
       }
 
-      fetch('/api/chat/log-interaction', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(outboundInteractionData),
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            console.log('✅ Outbound interaction logged:', data.data?.id);
-          } else {
-            console.error('❌ Failed to log outbound interaction:', data.message);
-          }
-        })
-        .catch(err => console.error('❌ Interaction log error:', err));
+      // Interactions are logged by the OpenAI route
+      console.log('✅ Message sent and received successfully');
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = {
