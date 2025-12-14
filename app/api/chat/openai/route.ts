@@ -79,6 +79,15 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
     const supabase = getServiceSupabase();
     let appointmentResult = null;
 
+    console.log('Intent detected:', intent);
+    console.log('Appointment data:', appointmentData);
+    console.log('Has required fields:', {
+      patientName: !!appointmentData?.patientName,
+      phoneNumber: !!appointmentData?.phoneNumber,
+      appointmentDate: !!appointmentData?.appointmentDate,
+      appointmentTime: !!appointmentData?.appointmentTime
+    });
+
     if (intent === 'book' && appointmentData?.patientName && appointmentData?.phoneNumber && appointmentData?.appointmentDate && appointmentData?.appointmentTime) {
       try {
         const bookingData = {

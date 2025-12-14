@@ -58,43 +58,98 @@ export default function WebChat() {
     const conversationText = conversation.map(m => m.content).join(' ');
     const data: any = { ...appointmentData };
 
-    const nameMatch = conversationText.match(/(?:my name is|I'm|I am)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
-    if (nameMatch && !data.patientName) {
-      data.patientName = nameMatch[1];
+    // Extract name - more flexible patterns
+    const namePatterns = [
+      /(?:my name is|I'm|I am|name)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
+      /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)$/m,
+      /\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/
+    ];
+    
+    for (const pattern of namePatterns) {
+      const match = conversationText.match(pattern);
+      if (match && !data.patientName && match[1].length > 2) {
+        data.patientName = match[1].trim();
+        break;
+      }
     }
 
-    const phoneMatch = conversationText.match(/\b(\d{3}[-.]?\d{3}[-.]?\d{4})\b/);
-    if (phoneMatch && !data.phoneNumber) {
-      data.phoneNumber = phoneMatch[1].replace(/[-.]/, '');
-      setPatientPhone(data.phoneNumber);
+    // Extract phone - multiple formats
+    const phonePatterns = [
+      /\b(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})\b/,
+      /\b(\d{10})\b/,
+      /\+1[\s-]?(\d{3})[\s-]?(\d{3})[\s-]?(\d{4})/
+    ];
+    
+    for (const pattern of phonePatterns) {
+      const match = conversationText.match(pattern);
+      if (match && !data.phoneNumber) {
+        data.phoneNumber = match[1].replace(/[-.\s]/g, '');
+        setPatientPhone(data.phoneNumber);
+        break;
+      }
     }
 
+    // Extract email
     const emailMatch = conversationText.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
     if (emailMatch && !data.email) {
       data.email = emailMatch[0];
     }
 
+    // Extract date of birth
     const dobMatch = conversationText.match(/\b(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/);
     if (dobMatch && !data.dateOfBirth) {
       data.dateOfBirth = dobMatch[1];
     }
 
-    const dateMatch = conversationText.match(/\b(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})\b/);
-    if (dateMatch && !data.appointmentDate) {
-      data.appointmentDate = dateMatch[1];
+    // Extract appointment date - more flexible
+    const datePatterns = [
+      /\b(\d{4}-\d{2}-\d{2})\b/,
+      /\b(\d{1,2}\/\d{1,2}\/\d{4})\b/,
+      /\b(\d{1,2}-\d{1,2}-\d{4})\b/,
+      /(tomorrow|today)/i,
+      /(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i,
+      /(\d{1,2})\s*(january|february|march|april|may|june|july|august|september|october|november|december)/i
+    ];
+    
+    for (const pattern of datePatterns) {
+      const match = conversationText.match(pattern);
+      if (match && !data.appointmentDate) {
+        if (match[1] === 'today') {
+          data.appointmentDate = new Date().toISOString().split('T')[0];
+        } else if (match[1] === 'tomorrow') {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          data.appointmentDate = tomorrow.toISOString().split('T')[0];
+        } else {
+          data.appointmentDate = match[1];
+        }
+        break;
+      }
     }
 
-    const timeMatch = conversationText.match(/\b(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\b/);
-    if (timeMatch && !data.appointmentTime) {
-      data.appointmentTime = timeMatch[1];
+    // Extract time - more flexible
+    const timePatterns = [
+      /\b(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\b/,
+      /\b(\d{1,2})\s*(?:AM|PM|am|pm)\b/,
+      /\b(\d{1,2}:\d{2})\b/
+    ];
+    
+    for (const pattern of timePatterns) {
+      const match = conversationText.match(pattern);
+      if (match && !data.appointmentTime) {
+        data.appointmentTime = match[1];
+        break;
+      }
     }
 
+    // Extract confirmation code
     const codeMatch = conversationText.match(/\b(CHAT-\d+)\b/i);
     if (codeMatch && !data.confirmationCode) {
       data.confirmationCode = codeMatch[1].toUpperCase();
     }
 
-    const serviceTypes = ['consultation', 'immigration exam', 'physical', 'urgent care', 'specialist'];
+    // Extract service type
+    const serviceTypes = ['consultation', 'immigration exam', 'physical', 'urgent care', 'specialist', 'checkup', 'exam'];
     for (const service of serviceTypes) {
       if (conversationText.toLowerCase().includes(service) && !data.appointmentType) {
         data.appointmentType = service;
@@ -102,6 +157,7 @@ export default function WebChat() {
       }
     }
 
+    console.log('Extracted appointment data:', data);
     return data;
   };
 
@@ -143,7 +199,11 @@ export default function WebChat() {
         interactionData.patient_id = patientId;
       }
 
-      void supabase.from('interactions').insert(interactionData);
+      fetch('/api/chat/log-interaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(interactionData),
+      }).catch(err => console.error('Interaction log error:', err));
 
       const openaiResponse = await fetch('/api/chat/openai', {
         method: 'POST',
@@ -204,7 +264,11 @@ export default function WebChat() {
         outboundInteractionData.patient_id = patientId || result.appointmentResult?.patientId;
       }
 
-      void supabase.from('interactions').insert(outboundInteractionData);
+      fetch('/api/chat/log-interaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(outboundInteractionData),
+      }).catch(err => console.error('Interaction log error:', err));
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = {
