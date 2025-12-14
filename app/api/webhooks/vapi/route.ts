@@ -112,7 +112,7 @@ async function handleCallStart(supabase: any, data: any) {
   }
 }
 
-async function handleSpeechUpdate(data: any) {
+async function handleSpeechUpdate(supabase: any, data: any) {
   const { message } = data;
   const callId = message?.call?.id;
   const transcript = message?.transcript || message?.speech;
@@ -142,7 +142,7 @@ async function handleSpeechUpdate(data: any) {
   }
 }
 
-async function handleConversationUpdate(data: any) {
+async function handleConversationUpdate(supabase: any, data: any) {
   const { message } = data;
   const callId = message?.call?.id;
   const conversation = message?.conversation || [];
@@ -174,7 +174,7 @@ async function handleConversationUpdate(data: any) {
   }
 }
 
-async function handleTranscript(call: any, transcript: any) {
+async function handleTranscript(supabase: any, call: any, transcript: any) {
   const { id, phoneNumber, customer } = call;
   const { text, role } = transcript;
 
@@ -202,7 +202,7 @@ async function handleTranscript(call: any, transcript: any) {
   }
 }
 
-async function handleMessage(call: any, message: any) {
+async function handleMessage(supabase: any, call: any, message: any) {
   const { id, phoneNumber, customer } = call;
   const { role, content } = message;
 
@@ -230,7 +230,7 @@ async function handleMessage(call: any, message: any) {
   }
 }
 
-async function handleCallEnd(data: any) {
+async function handleCallEnd(supabase: any, data: any) {
   const { message, call } = data;
   const callData = call || message?.call || message;
   const callId = callData?.id;
