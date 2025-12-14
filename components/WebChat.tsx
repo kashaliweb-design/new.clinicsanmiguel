@@ -203,7 +203,16 @@ export default function WebChat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(interactionData),
-      }).catch(err => console.error('Interaction log error:', err));
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            console.log('✅ Inbound interaction logged:', data.data?.id);
+          } else {
+            console.error('❌ Failed to log inbound interaction:', data.message);
+          }
+        })
+        .catch(err => console.error('❌ Interaction log error:', err));
 
       const openaiResponse = await fetch('/api/chat/openai', {
         method: 'POST',
@@ -268,7 +277,16 @@ export default function WebChat() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(outboundInteractionData),
-      }).catch(err => console.error('Interaction log error:', err));
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            console.log('✅ Outbound interaction logged:', data.data?.id);
+          } else {
+            console.error('❌ Failed to log outbound interaction:', data.message);
+          }
+        })
+        .catch(err => console.error('❌ Interaction log error:', err));
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = {

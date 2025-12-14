@@ -80,10 +80,14 @@ export default function InteractionsPage() {
       const { data, error } = await query;
 
       if (error) {
-        console.error('Supabase error:', error);
+        console.error('❌ Supabase error loading interactions:', error);
         throw error;
       }
 
+      console.log(`✅ Loaded ${data?.length || 0} interactions from Supabase`);
+      console.log('Filter:', filter);
+      console.log('Sample data:', data?.[0]);
+      
       setInteractions(data || []);
     } catch (error) {
       console.error('Error loading interactions:', error);
