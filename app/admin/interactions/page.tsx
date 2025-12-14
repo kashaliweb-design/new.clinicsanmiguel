@@ -7,7 +7,7 @@ import { MessageSquare, Phone, User, Calendar, Clock, Filter, RefreshCw } from '
 interface Interaction {
   id: string;
   patient_id: string;
-  channel: 'web' | 'sms' | 'voice';
+  channel: 'web' | 'web_chat' | 'sms' | 'voice';
   direction: 'inbound' | 'outbound';
   from_number: string;
   to_number: string;
@@ -25,7 +25,7 @@ interface Interaction {
 export default function InteractionsPage() {
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'web' | 'sms' | 'voice'>('all');
+  const [filter, setFilter] = useState<'all' | 'web' | 'web_chat' | 'sms' | 'voice'>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   useEffect(() => {
@@ -92,6 +92,7 @@ export default function InteractionsPage() {
   const getChannelIcon = (channel: string) => {
     switch (channel) {
       case 'web':
+      case 'web_chat':
         return <MessageSquare className="text-blue-600" size={20} />;
       case 'sms':
         return <MessageSquare className="text-green-600" size={20} />;
@@ -105,6 +106,7 @@ export default function InteractionsPage() {
   const getChannelBadge = (channel: string) => {
     const colors = {
       web: 'bg-blue-100 text-blue-800',
+      web_chat: 'bg-blue-100 text-blue-800',
       sms: 'bg-green-100 text-green-800',
       voice: 'bg-purple-100 text-purple-800',
     };
@@ -162,14 +164,14 @@ export default function InteractionsPage() {
                 All
               </button>
               <button
-                onClick={() => setFilter('web')}
+                onClick={() => setFilter('web_chat')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  filter === 'web'
+                  filter === 'web_chat'
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                Web
+                Chatbot
               </button>
               <button
                 onClick={() => setFilter('sms')}
@@ -231,9 +233,9 @@ export default function InteractionsPage() {
           <div className="bg-white rounded-lg shadow-sm p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Web</p>
+                <p className="text-sm text-gray-600">Chatbot</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  {interactions.filter((i) => i.channel === 'web').length}
+                  {interactions.filter((i) => i.channel === 'web_chat').length}
                 </p>
               </div>
               <MessageSquare className="text-blue-400" size={32} />
@@ -303,7 +305,7 @@ export default function InteractionsPage() {
                             interaction.channel
                           )}`}
                         >
-                          {interaction.channel.toUpperCase()}
+                          {interaction.channel === 'web_chat' ? 'CHATBOT' : interaction.channel.toUpperCase()}
                         </span>
                         {interaction.intent && (
                           <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">
