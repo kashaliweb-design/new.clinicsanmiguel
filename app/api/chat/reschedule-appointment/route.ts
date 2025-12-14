@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
         message: 'Missing required fields: phoneNumber and either confirmationCode or appointmentId'
       }, { status: 400 });
     }
+
+    const supabase = getServiceSupabase();
 
     // Step 1: Find the patient
     const { data: patient } = await supabase

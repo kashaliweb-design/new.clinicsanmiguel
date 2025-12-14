@@ -31,6 +31,14 @@ export default function WebChat() {
 
   const [conversationState, setConversationState] = useState<string>('initial');
   const [appointmentData, setAppointmentData] = useState<any>({});
+  const [sessionId, setSessionId] = useState<string>('');
+  const [patientId, setPatientId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!sessionId) {
+      setSessionId(`web-chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+    }
+  }, []);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -46,6 +54,57 @@ export default function WebChat() {
     }
   }, [isOpen]);
 
+  const extractAppointmentData = (conversation: Message[]) => {
+    const conversationText = conversation.map(m => m.content).join(' ');
+    const data: any = { ...appointmentData };
+
+    const nameMatch = conversationText.match(/(?:my name is|I'm|I am)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
+    if (nameMatch && !data.patientName) {
+      data.patientName = nameMatch[1];
+    }
+
+    const phoneMatch = conversationText.match(/\b(\d{3}[-.]?\d{3}[-.]?\d{4})\b/);
+    if (phoneMatch && !data.phoneNumber) {
+      data.phoneNumber = phoneMatch[1].replace(/[-.]/, '');
+      setPatientPhone(data.phoneNumber);
+    }
+
+    const emailMatch = conversationText.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
+    if (emailMatch && !data.email) {
+      data.email = emailMatch[0];
+    }
+
+    const dobMatch = conversationText.match(/\b(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/);
+    if (dobMatch && !data.dateOfBirth) {
+      data.dateOfBirth = dobMatch[1];
+    }
+
+    const dateMatch = conversationText.match(/\b(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4})\b/);
+    if (dateMatch && !data.appointmentDate) {
+      data.appointmentDate = dateMatch[1];
+    }
+
+    const timeMatch = conversationText.match(/\b(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\b/);
+    if (timeMatch && !data.appointmentTime) {
+      data.appointmentTime = timeMatch[1];
+    }
+
+    const codeMatch = conversationText.match(/\b(CHAT-\d+)\b/i);
+    if (codeMatch && !data.confirmationCode) {
+      data.confirmationCode = codeMatch[1].toUpperCase();
+    }
+
+    const serviceTypes = ['consultation', 'immigration exam', 'physical', 'urgent care', 'specialist'];
+    for (const service of serviceTypes) {
+      if (conversationText.toLowerCase().includes(service) && !data.appointmentType) {
+        data.appointmentType = service;
+        break;
+      }
+    }
+
+    return data;
+  };
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
@@ -56,38 +115,66 @@ export default function WebChat() {
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    
+    const extractedData = extractAppointmentData(updatedMessages);
+    setAppointmentData(extractedData);
+    
     setInputMessage('');
     setIsLoading(true);
 
     try {
-      // Log interaction to database
-      await supabase.from('interactions').insert({
+      const interactionData: any = {
+        session_id: sessionId,
         channel: 'web_chat',
         direction: 'inbound',
         message_body: inputMessage,
-        from_number: patientPhone || null,
-        assistant_id: 'a4d4a9da-20f8-43df-9877-9ef1c22ba3bf',
-      });
+        from_number: patientPhone || extractedData.phoneNumber || null,
+        intent: null,
+        metadata: {
+          appointment_data: extractedData,
+          source: 'web_chat',
+        },
+        created_at: new Date().toISOString(),
+      };
 
-      // Call OpenAI API for response
+      if (patientId) {
+        interactionData.patient_id = patientId;
+      }
+
+      await supabase.from('interactions').insert(interactionData);
+
       const openaiResponse = await fetch('/api/chat/openai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [...messages, userMessage].map(msg => ({
+          messages: updatedMessages.map(msg => ({
             role: msg.role,
             content: msg.content,
           })),
           conversationState,
-          appointmentData,
+          appointmentData: extractedData,
+          patientPhone: patientPhone || extractedData.phoneNumber,
+          sessionId,
         }),
       });
 
       const result = await openaiResponse.json();
       const response = result.message || 'I apologize, but I\'m having trouble processing your request.';
+
+      if (result.appointmentResult?.patientId && !patientId) {
+        setPatientId(result.appointmentResult.patientId);
+      }
+
+      if (result.appointmentResult?.confirmationCode) {
+        setAppointmentData((prev: any) => ({
+          ...prev,
+          confirmationCode: result.appointmentResult.confirmationCode,
+        }));
+      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -98,14 +185,26 @@ export default function WebChat() {
 
       setMessages((prev) => [...prev, assistantMessage]);
 
-      // Log assistant response
-      await supabase.from('interactions').insert({
+      const outboundInteractionData: any = {
+        session_id: sessionId,
         channel: 'web_chat',
         direction: 'outbound',
         message_body: response,
-        to_number: patientPhone || null,
-        assistant_id: 'a4d4a9da-20f8-43df-9877-9ef1c22ba3bf',
-      });
+        to_number: patientPhone || extractedData.phoneNumber || null,
+        intent: result.intent || null,
+        metadata: {
+          appointment_result: result.appointmentResult,
+          intent: result.intent,
+          source: 'web_chat',
+        },
+        created_at: new Date().toISOString(),
+      };
+
+      if (patientId || result.appointmentResult?.patientId) {
+        outboundInteractionData.patient_id = patientId || result.appointmentResult?.patientId;
+      }
+
+      await supabase.from('interactions').insert(outboundInteractionData);
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = {
