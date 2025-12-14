@@ -64,14 +64,27 @@ export default function InteractionsPage() {
 
   const loadInteractions = async () => {
     try {
-      const response = await fetch(`/api/admin/interactions?filter=${filter}`);
-      const result = await response.json();
+      let query = supabase
+        .from('interactions')
+        .select(`
+          *,
+          patient:patients(first_name, last_name, phone)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-      if (result.success) {
-        setInteractions(result.data || []);
-      } else {
-        console.error('Error loading interactions:', result.message);
+      if (filter !== 'all') {
+        query = query.eq('channel', filter);
       }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      setInteractions(data || []);
     } catch (error) {
       console.error('Error loading interactions:', error);
     } finally {

@@ -67,14 +67,17 @@ export default function PatientsPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/admin/patients');
-      const result = await response.json();
+      const { data, error: fetchError } = await supabase
+        .from('patients')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (result.success) {
-        setPatients(result.data || []);
-      } else {
-        throw new Error(result.message || 'Failed to load patients');
+      if (fetchError) {
+        console.error('Supabase error:', fetchError);
+        throw fetchError;
       }
+
+      setPatients(data || []);
     } catch (err: any) {
       console.error('Error loading patients:', err);
       setError(err.message || 'Failed to load patients');
