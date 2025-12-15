@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,10 +12,10 @@ export async function GET(request: NextRequest) {
     const supabase = getServiceSupabase();
 
     let query = supabase
-      .from('interactions')
+      .from(TABLES.INTERACTIONS)
       .select(`
         *,
-        patient:patients(first_name, last_name, phone)
+        patient:sanmiguel_patients(first_name, last_name, phone)
       `)
       .order('created_at', { ascending: false })
       .limit(100);

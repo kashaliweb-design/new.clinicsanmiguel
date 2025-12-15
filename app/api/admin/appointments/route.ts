@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
     const supabase = getServiceSupabase();
 
     let query = supabase
-      .from('appointments')
-      .select('*, patients(*), clinics(*)')
+      .from(TABLES.APPOINTMENTS)
+      .select('*, sanmiguel_patients(*), sanmiguel_clinics(*)')
       .order('appointment_date', { ascending: true });
 
     if (filter !== 'all') {

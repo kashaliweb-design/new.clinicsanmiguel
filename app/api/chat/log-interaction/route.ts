@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (metadata) interactionData.metadata = metadata;
 
     const { data, error } = await supabase
-      .from('interactions')
+      .from(TABLES.INTERACTIONS)
       .insert(interactionData)
       .select()
       .single();

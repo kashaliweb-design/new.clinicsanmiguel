@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     let patientId;
     
     const { data: existingPatient } = await supabase
-      .from('patients')
+      .from(TABLES.PATIENTS)
       .select('id')
       .eq('phone', phoneNumber)
       .single();
@@ -55,14 +55,14 @@ export async function POST(request: NextRequest) {
       
       if (Object.keys(updateData).length > 0) {
         await supabase
-          .from('patients')
+          .from(TABLES.PATIENTS)
           .update(updateData)
           .eq('id', patientId);
       }
     } else {
       // Create new patient
       const { data: newPatient, error: patientError } = await supabase
-        .from('patients')
+        .from(TABLES.PATIENTS)
         .insert({
           first_name: firstName,
           last_name: lastName,
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Get first available clinic
     const { data: clinic, error: clinicError } = await supabase
-      .from('clinics')
+      .from(TABLES.CLINICS)
       .select('id')
       .eq('active', true)
       .limit(1)
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     });
 
     const { data: appointment, error: appointmentError } = await supabase
-      .from('appointments')
+      .from(TABLES.APPOINTMENTS)
       .insert({
         patient_id: patientId,
         clinic_id: clinic.id,
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
     console.log('Appointment created successfully:', appointment);
 
     // Step 4: Log interaction
-    await supabase.from('interactions').insert({
+    await supabase.from(TABLES.INTERACTIONS).insert({
       session_id: `chat-${Date.now()}`,
       patient_id: patientId,
       channel: 'web_chat',

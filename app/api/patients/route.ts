@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,9 +23,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const supabase = getServiceSupabase();
+
     // Insert patient into database
     const { data, error } = await supabase
-      .from('patients')
+      .from(TABLES.PATIENTS)
       .insert([
         {
           first_name,
@@ -61,8 +63,10 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getServiceSupabase();
+    
     const { data, error } = await supabase
-      .from('patients')
+      .from(TABLES.PATIENTS)
       .select('*')
       .order('created_at', { ascending: false });
 

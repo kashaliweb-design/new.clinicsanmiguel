@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     // Step 1: Find the patient
     const { data: patient } = await supabase
-      .from('patients')
+      .from(TABLES.PATIENTS)
       .select('id')
       .eq('phone', phoneNumber)
       .single();
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     let appointment;
     if (appointmentId) {
       const { data } = await supabase
-        .from('appointments')
+        .from(TABLES.APPOINTMENTS)
         .select('*')
         .eq('id', appointmentId)
         .eq('patient_id', patient.id)
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       appointment = data;
     } else if (confirmationCode) {
       const { data } = await supabase
-        .from('appointments')
+        .from(TABLES.APPOINTMENTS)
         .select('*')
         .eq('patient_id', patient.id)
         .eq('confirmation_code', confirmationCode)
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     };
 
     const { data: cancelledAppointment, error: updateError } = await supabase
-      .from('appointments')
+      .from(TABLES.APPOINTMENTS)
       .update(updateData)
       .eq('id', appointment.id)
       .select()
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 4: Log interaction
-    await supabase.from('interactions').insert({
+    await supabase.from(TABLES.INTERACTIONS).insert({
       session_id: `chat-cancel-${Date.now()}`,
       patient_id: patient.id,
       channel: 'web_chat',

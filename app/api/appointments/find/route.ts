@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 import { formatPhoneNumber } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
@@ -16,8 +16,8 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceSupabase();
     let query = supabase
-      .from('appointments')
-      .select('*, patients(*), clinics(*)')
+      .from(TABLES.APPOINTMENTS)
+      .select('*, sanmiguel_patients(*), sanmiguel_clinics(*)')
       .gte('appointment_date', new Date().toISOString())
       .order('appointment_date', { ascending: true });
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       
       // First find patient
       const { data: patient } = await supabase
-        .from('patients')
+        .from(TABLES.PATIENTS)
         .select('id')
         .eq('phone', formattedPhone)
         .single();

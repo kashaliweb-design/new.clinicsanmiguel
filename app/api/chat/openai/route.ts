@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -44,9 +44,34 @@ LOCATIONS: Dallas, Arlington, Houston, San Antonio, Fort Worth, Farmers Branch
 Current state: ${conversationState || 'initial'}
 ${appointmentData ? `Data: ${JSON.stringify(appointmentData)}` : ''}
 
-BOOKING FLOW: Ask for info one step at a time (name → phone → date → time).
+APPOINTMENT MANAGEMENT FLOWS:
 
-Remember: SHORT, FRIENDLY, ONE QUESTION!`;
+BOOKING FLOW - Follow this EXACT sequence:
+1. If no name: "May I have your name, please?"
+2. If no phone: "Could you please provide your phone number?"
+3. If no date: "When would you like to schedule your appointment? (Please provide a date)"
+4. If no time: "What time works best for you on that date?"
+5. If no service type: "What type of service do you need? (consultation, immigration exam, etc.)"
+6. CONFIRMATION: "To confirm, would you like to book a [service] for [date] at [time]?"
+7. Wait for YES/confirmation before booking
+
+CANCELLATION FLOW:
+1. "I can help you cancel your appointment. May I have your phone number?"
+2. "What's your confirmation code? (or appointment date if you don't have the code)"
+3. Find and show appointment details
+4. "To confirm, do you want to cancel your [service] appointment on [date] at [time]?"
+5. Wait for YES confirmation before canceling
+
+RESCHEDULING FLOW:
+1. "I can help you reschedule. What's your phone number?"
+2. "What's your confirmation code? (or current appointment date)"
+3. Show current appointment
+4. "What's your new preferred date?"
+5. "What time works best on the new date?"
+6. "To confirm, reschedule from [old date/time] to [new date/time]?"
+7. Wait for YES confirmation before rescheduling
+
+NEVER skip confirmation steps! Always confirm before making changes.`;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -88,6 +113,63 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
       appointmentTime: !!appointmentData?.appointmentTime
     });
 
+    // Auto-create/update patient when we have name and phone (regardless of appointment)
+    let autoCreatedPatientId = null;
+    if (appointmentData?.patientName && appointmentData?.phoneNumber) {
+      try {
+        console.log('👤 Auto-creating/updating patient with collected details');
+        const nameParts = appointmentData.patientName.trim().split(' ');
+        const firstName = nameParts[0];
+        const lastName = nameParts.slice(1).join(' ') || firstName;
+
+        // Check if patient exists
+        const { data: existingPatient } = await supabase
+          .from(TABLES.PATIENTS)
+          .select('id')
+          .eq('phone', appointmentData.phoneNumber)
+          .single();
+
+        if (existingPatient) {
+          console.log('✅ Patient already exists:', existingPatient.id);
+          autoCreatedPatientId = existingPatient.id;
+          
+          // Update patient info if new data provided
+          const updateData: any = {};
+          if (appointmentData.email) updateData.email = appointmentData.email;
+          if (appointmentData.dateOfBirth) updateData.date_of_birth = appointmentData.dateOfBirth;
+          
+          if (Object.keys(updateData).length > 0) {
+            await supabase.from(TABLES.PATIENTS).update(updateData).eq('id', existingPatient.id);
+            console.log('✅ Patient info updated');
+          }
+        } else {
+          // Create new patient
+          const { data: newPatient, error: patientError } = await supabase
+            .from(TABLES.PATIENTS)
+            .insert({
+              first_name: firstName,
+              last_name: lastName,
+              phone: appointmentData.phoneNumber,
+              email: appointmentData.email || null,
+              date_of_birth: appointmentData.dateOfBirth || null,
+              consent_sms: true,
+              consent_voice: false,
+            })
+            .select()
+            .single();
+
+          if (patientError) {
+            console.error('❌ Error creating patient:', patientError);
+          } else if (newPatient) {
+            autoCreatedPatientId = newPatient.id;
+            console.log('✅ New patient created:', newPatient.id);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error in auto-patient creation:', error);
+      }
+    }
+
     if (intent === 'book' && appointmentData?.patientName && appointmentData?.phoneNumber && appointmentData?.appointmentDate && appointmentData?.appointmentTime) {
       try {
         const bookingData = {
@@ -108,7 +190,7 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
 
         let patientId;
         const { data: existingPatient } = await supabase
-          .from('patients')
+          .from(TABLES.PATIENTS)
           .select('id')
           .eq('phone', bookingData.phoneNumber)
           .single();
@@ -119,11 +201,11 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
           if (bookingData.email) updateData.email = bookingData.email;
           if (bookingData.dateOfBirth) updateData.date_of_birth = bookingData.dateOfBirth;
           if (Object.keys(updateData).length > 0) {
-            await supabase.from('patients').update(updateData).eq('id', patientId);
+            await supabase.from(TABLES.PATIENTS).update(updateData).eq('id', patientId);
           }
         } else {
           const { data: newPatient } = await supabase
-            .from('patients')
+            .from(TABLES.PATIENTS)
             .insert({
               first_name: firstName,
               last_name: lastName,
@@ -139,14 +221,29 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
           if (newPatient) patientId = newPatient.id;
         }
 
-        const { data: clinic } = await supabase
-          .from('clinics')
+        const { data: clinic, error: clinicError } = await supabase
+          .from(TABLES.CLINICS)
           .select('id')
           .eq('active', true)
           .limit(1)
           .single();
 
+        if (clinicError) {
+          console.error('❌ Error fetching clinic:', clinicError);
+        }
+
+        if (!clinic) {
+          console.error('❌ No active clinic found in database');
+        }
+
+        if (!patientId) {
+          console.error('❌ Patient ID is missing');
+        }
+
         if (clinic && patientId) {
+          console.log('✅ Clinic found:', clinic.id);
+          console.log('✅ Patient ID:', patientId);
+
           let time24Hour = bookingData.appointmentTime;
           const timeMatch = bookingData.appointmentTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
           if (timeMatch) {
@@ -159,10 +256,20 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
           }
 
           const appointmentDateTime = `${bookingData.appointmentDate}T${time24Hour}:00`;
-          const confirmationCode = `CHAT-${Date.now().toString().substring(5)}`;
+          // Generate 10-char confirmation code: CHAT-XXXXX (max 10 chars)
+          const confirmationCode = `CHAT-${Date.now().toString().slice(-5)}`;
 
-          const { data: appointment } = await supabase
-            .from('appointments')
+          console.log('📅 Creating appointment:', {
+            patient_id: patientId,
+            clinic_id: clinic.id,
+            appointment_date: appointmentDateTime,
+            service_type: bookingData.appointmentType || 'consultation',
+            status: 'confirmed',
+            confirmation_code: confirmationCode,
+          });
+
+          const { data: appointment, error: appointmentError } = await supabase
+            .from(TABLES.APPOINTMENTS)
             .insert({
               patient_id: patientId,
               clinic_id: clinic.id,
@@ -177,7 +284,13 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
             .select()
             .single();
 
+          if (appointmentError) {
+            console.error('❌ APPOINTMENT INSERT ERROR:', appointmentError);
+            console.error('Error details:', JSON.stringify(appointmentError, null, 2));
+          }
+
           if (appointment) {
+            console.log('✅ Appointment created successfully:', appointment.id);
             appointmentResult = {
               success: true,
               message: `Perfect! Your appointment has been confirmed. Your confirmation code is ${confirmationCode}. You're scheduled for ${bookingData.appointmentType || 'consultation'} on ${bookingData.appointmentDate} at ${bookingData.appointmentTime}.`,
@@ -185,11 +298,15 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
               confirmationCode: confirmationCode,
               patientId: patientId,
             };
+          } else {
+            console.error('❌ Appointment was not created (no data returned)');
           }
+        } else {
+          console.error('❌ Cannot create appointment - missing clinic or patientId');
         }
         
         if (sessionId && appointmentResult) {
-          await supabase.from('interactions').insert({
+          await supabase.from(TABLES.INTERACTIONS).insert({
             session_id: sessionId,
             patient_id: appointmentResult.patientId,
             channel: 'web_chat',
@@ -210,7 +327,7 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
       }
     } else if (intent === 'confirm' && (appointmentData?.confirmationCode || appointmentData?.phoneNumber)) {
       try {
-        let query = supabase.from('appointments').select('*, patients(*), clinics(*)');
+        let query = supabase.from(TABLES.APPOINTMENTS).select('*, sanmiguel_patients(*), sanmiguel_clinics(*)');
         if (appointmentData.confirmationCode) {
           query = query.eq('confirmation_code', appointmentData.confirmationCode.toUpperCase());
         } else if (appointmentData.appointmentId) {
@@ -222,13 +339,13 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
           const appointment = appointments[0];
           if (appointment.status !== 'confirmed') {
             const { data: updatedAppointment } = await supabase
-              .from('appointments')
+              .from(TABLES.APPOINTMENTS)
               .update({
                 status: 'confirmed',
                 confirmed_at: new Date().toISOString(),
               })
               .eq('id', appointment.id)
-              .select('*, patients(*), clinics(*)')
+              .select('*, sanmiguel_patients(*), sanmiguel_clinics(*)')
               .single();
 
             if (updatedAppointment) {
@@ -248,7 +365,7 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
         }
         
         if (sessionId && appointmentResult && appointmentResult.appointment) {
-          await supabase.from('interactions').insert({
+          await supabase.from(TABLES.INTERACTIONS).insert({
             session_id: sessionId,
             patient_id: appointmentResult.appointment.patient_id,
             channel: 'web_chat',
@@ -269,7 +386,7 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
     } else if (intent === 'cancel' && appointmentData?.phoneNumber && (appointmentData?.confirmationCode || appointmentData?.appointmentId)) {
       try {
         const { data: patient } = await supabase
-          .from('patients')
+          .from(TABLES.PATIENTS)
           .select('id')
           .eq('phone', appointmentData.phoneNumber)
           .single();
@@ -278,7 +395,7 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
           let appointment;
           if (appointmentData.appointmentId) {
             const { data } = await supabase
-              .from('appointments')
+              .from(TABLES.APPOINTMENTS)
               .select('*')
               .eq('id', appointmentData.appointmentId)
               .eq('patient_id', patient.id)
@@ -286,7 +403,7 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
             appointment = data;
           } else if (appointmentData.confirmationCode) {
             const { data } = await supabase
-              .from('appointments')
+              .from(TABLES.APPOINTMENTS)
               .select('*')
               .eq('patient_id', patient.id)
               .eq('confirmation_code', appointmentData.confirmationCode)
@@ -296,7 +413,7 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
 
           if (appointment && appointment.status !== 'cancelled') {
             const { data: cancelledAppointment } = await supabase
-              .from('appointments')
+              .from(TABLES.APPOINTMENTS)
               .update({
                 status: 'cancelled',
                 notes: `${appointment.notes || ''}\n\nCancelled via web chat. Reason: ${appointmentData.reason || 'Not specified'}`,
@@ -321,7 +438,7 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
     } else if (intent === 'reschedule' && appointmentData?.phoneNumber && (appointmentData?.confirmationCode || appointmentData?.appointmentId) && appointmentData?.newDate && appointmentData?.newTime) {
       try {
         const { data: patient } = await supabase
-          .from('patients')
+          .from(TABLES.PATIENTS)
           .select('id')
           .eq('phone', appointmentData.phoneNumber)
           .single();
@@ -330,7 +447,7 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
           let appointment;
           if (appointmentData.appointmentId) {
             const { data } = await supabase
-              .from('appointments')
+              .from(TABLES.APPOINTMENTS)
               .select('*')
               .eq('id', appointmentData.appointmentId)
               .eq('patient_id', patient.id)
@@ -338,7 +455,7 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
             appointment = data;
           } else if (appointmentData.confirmationCode) {
             const { data } = await supabase
-              .from('appointments')
+              .from(TABLES.APPOINTMENTS)
               .select('*')
               .eq('patient_id', patient.id)
               .eq('confirmation_code', appointmentData.confirmationCode)
@@ -360,7 +477,7 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
 
             const newAppointmentDate = `${appointmentData.newDate}T${time24Hour}:00`;
             const { data: updatedAppointment } = await supabase
-              .from('appointments')
+              .from(TABLES.APPOINTMENTS)
               .update({
                 appointment_date: newAppointmentDate,
                 status: 'scheduled',
@@ -390,7 +507,7 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
     if (sessionId && messages.length > 0) {
       const lastUserMessage = messages[messages.length - 1];
       try {
-        await supabase.from('interactions').insert({
+        await supabase.from(TABLES.INTERACTIONS).insert({
           session_id: sessionId,
           patient_id: appointmentResult?.patientId || null,
           channel: 'web_chat',
@@ -413,7 +530,7 @@ Remember: SHORT, FRIENDLY, ONE QUESTION!`;
     // Log outbound interaction (assistant response)
     if (sessionId) {
       try {
-        await supabase.from('interactions').insert({
+        await supabase.from(TABLES.INTERACTIONS).insert({
           session_id: sessionId,
           patient_id: appointmentResult?.patientId || null,
           channel: 'web_chat',

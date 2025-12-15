@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +22,8 @@ export async function POST(request: NextRequest) {
         message: 'Missing required fields: (phoneNumber or email) and (confirmationCode or appointmentId)'
       }, { status: 400 });
     }
+
+    const supabase = getServiceSupabase();
 
     // Step 1: Find the patient by phone or email
     let patient;
@@ -85,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     // Step 3: Delete the appointment (hard delete from database)
     const { error: deleteError } = await supabase
-      .from('appointments')
+      .from(TABLES.APPOINTMENTS)
       .delete()
       .eq('id', appointment.id);
 
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 4: Log interaction
-    await supabase.from('interactions').insert({
+    await supabase.from(TABLES.INTERACTIONS).insert({
       session_id: `chat-delete-${Date.now()}`,
       patient_id: patient.id,
       channel: 'web_chat',

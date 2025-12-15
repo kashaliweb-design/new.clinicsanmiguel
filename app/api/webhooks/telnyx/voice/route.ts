@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,9 +44,11 @@ async function handleCallInitiated(payload: any) {
 
   console.log('Call initiated:', { from, to, direction });
 
+  const supabase = getServiceSupabase();
+
   // Log the interaction in database
   try {
-    await supabase.from('interactions').insert({
+    await supabase.from(TABLES.INTERACTIONS).insert({
       channel: 'voice',
       direction: direction === 'incoming' ? 'inbound' : 'outbound',
       from_number: from,
@@ -69,10 +71,12 @@ async function handleCallAnswered(payload: any) {
 
   console.log('Call answered:', { from, to });
 
+  const supabase = getServiceSupabase();
+
   // Update interaction status
   try {
     await supabase
-      .from('interactions')
+      .from(TABLES.INTERACTIONS)
       .update({
         metadata: {
           call_control_id,
@@ -94,10 +98,12 @@ async function handleCallHangup(payload: any) {
 
   console.log('Call ended:', { from, to, duration: call_duration_secs });
 
+  const supabase = getServiceSupabase();
+
   // Update interaction with call duration
   try {
     await supabase
-      .from('interactions')
+      .from(TABLES.INTERACTIONS)
       .update({
         metadata: {
           call_control_id,

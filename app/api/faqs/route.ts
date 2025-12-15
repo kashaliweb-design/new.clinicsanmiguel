@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = getServiceSupabase();
     let queryBuilder = supabase
-      .from('faqs')
+      .from(TABLES.FAQS)
       .select('*')
       .eq('active', true)
       .eq('language', language);

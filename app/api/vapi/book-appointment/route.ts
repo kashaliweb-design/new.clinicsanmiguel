@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,11 +40,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const supabase = getServiceSupabase();
+
     // Step 1: Check if patient exists or create new patient
     let patientId;
     
     const { data: existingPatient } = await supabase
-      .from('patients')
+      .from(TABLES.PATIENTS)
       .select('id')
       .eq('phone', phoneNumber)
       .single();
@@ -60,7 +62,7 @@ export async function POST(request: NextRequest) {
       
       if (Object.keys(updateData).length > 0) {
         await supabase
-          .from('patients')
+          .from(TABLES.PATIENTS)
           .update(updateData)
           .eq('id', patientId);
       }
@@ -72,7 +74,7 @@ export async function POST(request: NextRequest) {
       
       // Create new patient
       const { data: newPatient, error: patientError } = await supabase
-        .from('patients')
+        .from(TABLES.PATIENTS)
         .insert({
           first_name: firstName,
           last_name: lastName,
@@ -102,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Get first available clinic
     const { data: clinic } = await supabase
-      .from('clinics')
+      .from(TABLES.CLINICS)
       .select('id')
       .eq('active', true)
       .limit(1)
@@ -137,12 +139,12 @@ export async function POST(request: NextRequest) {
     
     const appointmentDateTime = `${appointmentDate}T${time24Hour}:00`;
     
-    // Generate confirmation code
-    const tempId = Date.now().toString().substring(5);
+    // Generate confirmation code (max 10 chars)
+    const tempId = Date.now().toString().slice(-5);
     const confirmationCode = `VAPI-${tempId}`;
     
     const { data: appointment, error: appointmentError } = await supabase
-      .from('appointments')
+      .from(TABLES.APPOINTMENTS)
       .insert({
         patient_id: patientId,
         clinic_id: clinic.id,
@@ -168,7 +170,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 4: Log interaction
-    await supabase.from('interactions').insert({
+    await supabase.from(TABLES.INTERACTIONS).insert({
       session_id: `vapi-${Date.now()}`,
       patient_id: patientId,
       channel: 'voice_call',

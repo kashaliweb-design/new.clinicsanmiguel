@@ -20,7 +20,7 @@ export default function AppointmentsPage() {
         {
           event: '*',
           schema: 'public',
-          table: 'appointments',
+          table: 'sanmiguel_appointments',
         },
         (payload) => {
           console.log('Appointment change detected:', payload);

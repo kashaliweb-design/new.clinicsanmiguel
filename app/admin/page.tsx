@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, TABLES } from '@/lib/supabase';
 import { MessageSquare, Phone, Calendar, Users, TrendingUp, Clock } from 'lucide-react';
 
 interface Stats {
@@ -87,45 +87,26 @@ export default function AdminDashboard() {
       setError(null);
       console.log('Loading dashboard data...');
       
-      // Get stats
-      const [interactions, appointments, patients, todayInteractions] = await Promise.all([
-        supabase.from('interactions').select('id', { count: 'exact', head: true }),
-        supabase.from('appointments').select('id', { count: 'exact', head: true }),
-        supabase.from('patients').select('id', { count: 'exact', head: true }),
-        supabase
-          .from('interactions')
-          .select('id', { count: 'exact', head: true })
-          .gte('created_at', new Date().toISOString().split('T')[0]),
-      ]);
+      // Get stats from API route (uses service role key)
+      const statsResponse = await fetch('/api/admin/stats');
+      const statsData = await statsResponse.json();
 
-      console.log('Stats loaded:', {
-        interactions: interactions.count,
-        appointments: appointments.count,
-        patients: patients.count,
-        today: todayInteractions.count
-      });
+      if (!statsData.success) {
+        throw new Error(statsData.message || 'Failed to load stats');
+      }
+
+      console.log('Stats loaded:', statsData.data);
 
       setStats({
-        totalInteractions: interactions.count || 0,
-        totalAppointments: appointments.count || 0,
-        totalPatients: patients.count || 0,
-        todayInteractions: todayInteractions.count || 0,
+        totalInteractions: statsData.data.totalInteractions,
+        totalAppointments: statsData.data.totalAppointments,
+        totalPatients: statsData.data.totalPatients,
+        todayInteractions: statsData.data.todayInteractions,
       });
 
-      // Get recent interactions
-      const { data: recent, error: interactionsError } = await supabase
-        .from('interactions')
-        .select('*, patients(first_name, last_name, phone, date_of_birth)')
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (interactionsError) {
-        console.error('Error fetching interactions:', interactionsError);
-        setError(`Failed to load interactions: ${interactionsError.message}`);
-      } else {
-        console.log('Recent interactions loaded:', recent?.length || 0);
-        setRecentInteractions(recent || []);
-      }
+      // Set recent interactions from API response
+      console.log('Recent interactions loaded:', statsData.data.recentInteractions?.length || 0);
+      setRecentInteractions(statsData.data.recentInteractions || []);
     } catch (error: any) {
       console.error('Error loading dashboard:', error);
       setError(error.message || 'Failed to load dashboard data');
@@ -304,16 +285,16 @@ export default function AdminDashboard() {
                       {new Date(interaction.created_at).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {interaction.patients
-                        ? `${interaction.patients.first_name} ${interaction.patients.last_name}`
+                      {interaction.patient
+                        ? `${interaction.patient.first_name} ${interaction.patient.last_name}`
                         : 'Anonymous'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {interaction.patients?.phone || interaction.from_number || '-'}
+                      {interaction.patient?.phone || interaction.from_number || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {interaction.patients?.date_of_birth 
-                        ? `${calculateAge(interaction.patients.date_of_birth)} yrs`
+                      {interaction.patient?.date_of_birth 
+                        ? `${calculateAge(interaction.patient.date_of_birth)} yrs`
                         : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

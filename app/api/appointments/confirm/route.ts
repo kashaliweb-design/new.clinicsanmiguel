@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 import { sendSMS } from '@/lib/telnyx';
 
 export async function POST(request: NextRequest) {
@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
 
     // Find appointment
     let query = supabase
-      .from('appointments')
-      .select('*, patients(*), clinics(*)');
+      .from(TABLES.APPOINTMENTS)
+      .select('*, sanmiguel_patients(*), sanmiguel_clinics(*)');
 
     if (confirmationCode) {
       query = query.eq('confirmation_code', confirmationCode.toUpperCase());
@@ -52,13 +52,13 @@ export async function POST(request: NextRequest) {
 
     // Update appointment status
     const { data: updatedAppointment, error: updateError } = await supabase
-      .from('appointments')
+      .from(TABLES.APPOINTMENTS)
       .update({
         status: 'confirmed',
         confirmed_at: new Date().toISOString(),
       })
       .eq('id', appointment.id)
-      .select('*, patients(*), clinics(*)')
+      .select('*, sanmiguel_patients(*), sanmiguel_clinics(*)')
       .single();
 
     if (updateError) {
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log audit
-    await supabase.from('audit_logs').insert({
+    await supabase.from(TABLES.AUDIT_LOGS).insert({
       entity_type: 'appointment',
       entity_id: appointment.id,
       action: 'confirm',

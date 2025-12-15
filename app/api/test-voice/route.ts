@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 export async function GET() {
   try {
+    const supabase = getServiceSupabase();
+    
     // Test adding a voice interaction
-    const { data, error } = await supabase.from('interactions').insert({
+    const { data, error } = await supabase.from(TABLES.INTERACTIONS).insert({
       session_id: 'test-' + Date.now(),
       channel: 'voice',
       direction: 'inbound',

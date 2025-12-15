@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const supabase = getServiceSupabase();
 
     const { data, error } = await supabase
-      .from('patients')
+      .from(TABLES.PATIENTS)
       .select('*')
       .order('created_at', { ascending: false });
 
