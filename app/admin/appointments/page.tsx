@@ -38,23 +38,21 @@ export default function AppointmentsPage() {
 
   const loadAppointments = async () => {
     try {
-      let query = supabase
-        .from('appointments')
-        .select('*, patients(*), clinics(*)')
-        .order('appointment_date', { ascending: true });
+      setLoading(true);
 
-      if (filter !== 'all') {
-        query = query.eq('status', filter);
+      const response = await fetch(`/api/admin/appointments?filter=${filter}`, {
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to load appointments (${response.status}): ${errorText}`
+        );
       }
 
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-
-      setAppointments(data || []);
+      const result = await response.json();
+      setAppointments(result?.data || []);
     } catch (error) {
       console.error('Error loading appointments:', error);
     } finally {
