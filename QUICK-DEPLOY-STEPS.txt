@@ -1,0 +1,125 @@
+========================================
+QUICK DEPLOYMENT STEPS - VERCEL
+========================================
+
+STEP 1: INSTALL VERCEL CLI
+========================================
+npm install -g vercel
+
+STEP 2: LOGIN
+========================================
+vercel login
+(Browser will open, login with GitHub/GitLab/Email)
+
+STEP 3: DEPLOY
+========================================
+cd "c:\Users\DELL\Desktop\pdate agent"
+vercel
+
+Answer prompts:
+- Set up and deploy? Y
+- Link to existing project? N
+- Project name? clinica-sanmiguel
+- Directory? ./ (press Enter)
+- Override settings? N
+
+STEP 4: ADD ENVIRONMENT VARIABLES
+========================================
+
+Go to: https://vercel.com/dashboard
+→ Select your project
+→ Settings → Environment Variables
+→ Add these 4 variables:
+
+1. NEXT_PUBLIC_SUPABASE_URL
+   Value: (your Supabase URL from .env.local)
+
+2. NEXT_PUBLIC_SUPABASE_ANON_KEY
+   Value: (your Supabase anon key from .env.local)
+
+3. SUPABASE_SERVICE_ROLE_KEY
+   Value: (your Supabase service role key from .env.local)
+
+4. OPENAI_API_KEY
+   Value: (copy from your .env.local file)fE8kiJVlF6rTT79N7sA
+
+STEP 5: REDEPLOY WITH VARIABLES
+========================================
+vercel --prod
+
+Wait for deployment to complete.
+
+STEP 6: TEST YOUR LIVE SITE
+========================================
+1. Open the URL Vercel gives you (e.g., https://clinica-sanmiguel.vercel.app)
+2. Click chat icon
+3. Test appointment booking
+4. Check admin dashboard: /admin
+
+STEP 7: UPDATE VAPI WEBHOOK (if using voice)
+========================================
+1. Go to: https://vapi.ai/dashboard
+2. Select your assistant
+3. Update webhook URL:
+   https://your-url.vercel.app/api/webhooks/vapi
+
+========================================
+ALTERNATIVE: DEPLOY VIA GITHUB
+========================================
+
+STEP 1: Push to GitHub
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/yourusername/clinica-sanmiguel.git
+git push -u origin main
+
+STEP 2: Connect to Vercel
+1. Go to: https://vercel.com/new
+2. Import your GitHub repository
+3. Add environment variables
+4. Deploy
+
+========================================
+TROUBLESHOOTING
+========================================
+
+Build fails?
+→ Run: npm run build
+→ Fix any errors
+→ Deploy again
+
+Environment variables not working?
+→ Make sure you added all 4 variables
+→ Redeploy after adding: vercel --prod
+
+Can't access admin?
+→ Check URL: https://your-url.vercel.app/admin
+
+Appointments not creating?
+→ Check Vercel logs: vercel logs
+→ Verify Supabase connection
+→ Check browser console (F12)
+
+========================================
+IMPORTANT NOTES
+========================================
+
+✅ Never commit .env.local to GitHub
+✅ Keep your OpenAI API key secret
+✅ Add payment method to OpenAI for higher limits
+✅ Test locally before deploying: npm run build
+✅ Check Vercel logs if issues: vercel logs
+
+========================================
+YOUR DEPLOYMENT URL
+========================================
+
+After deployment, you'll get a URL like:
+https://clinica-sanmiguel.vercel.app
+
+This is your live site!
+Share this with users to access the chatbot.
+
+Admin dashboard:
+https://clinica-sanmiguel.vercel.app/admin

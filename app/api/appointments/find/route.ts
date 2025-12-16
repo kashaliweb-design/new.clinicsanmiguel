@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const supabase = getServiceSupabase();
     let query = supabase
       .from(TABLES.APPOINTMENTS)
-      .select('*, sanmiguel_patients(*), sanmiguel_clinics(*)')
+      .select('*, patients(*), clinics(*)')
       .gte('appointment_date', new Date().toISOString())
       .order('appointment_date', { ascending: true });
 

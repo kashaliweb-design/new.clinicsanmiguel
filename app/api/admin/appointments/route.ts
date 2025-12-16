@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from(TABLES.APPOINTMENTS)
-      .select('*, sanmiguel_patients(*), sanmiguel_clinics(*)')
+      .select('*, patients(*), clinics(*)')
       .order('appointment_date', { ascending: true });
 
     if (filter !== 'all') {

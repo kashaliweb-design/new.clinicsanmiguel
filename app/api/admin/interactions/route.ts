@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       .from(TABLES.INTERACTIONS)
       .select(`
         *,
-        patient:sanmiguel_patients(first_name, last_name, phone)
+        patient:patients(first_name, last_name, phone)
       `)
       .order('created_at', { ascending: false })
       .limit(100);

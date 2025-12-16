@@ -354,6 +354,9 @@ async function handleCallEnd(supabase: any, data: any) {
         .single();
 
       if (clinic) {
+        // Generate confirmation code for voice appointments
+        const confirmationCode = `VOICE-${Math.floor(100000 + Math.random() * 900000)}`;
+        
         const { data: appointment, error: appointmentError } = await supabase
           .from(TABLES.APPOINTMENTS)
           .insert({
@@ -363,7 +366,8 @@ async function handleCallEnd(supabase: any, data: any) {
             appointment_time: appointmentInfo.time || '10:00:00',
             reason: appointmentInfo.reason || 'General Consultation',
             status: 'scheduled',
-            notes: `Appointment scheduled via VAPI call. Call ID: ${callId}`,
+            confirmation_code: confirmationCode,
+            notes: `Appointment scheduled via VAPI call. Call ID: ${callId}. Confirmation: ${confirmationCode}`,
             created_at: new Date().toISOString(),
           })
           .select()
@@ -374,8 +378,11 @@ async function handleCallEnd(supabase: any, data: any) {
         } else {
           console.log('=== APPOINTMENT CREATED ===');
           console.log('Appointment ID:', appointment?.id);
+          console.log('Confirmation Code:', confirmationCode);
           console.log('Date:', appointmentInfo.date);
           console.log('Time:', appointmentInfo.time);
+          console.log('Patient ID:', patientId);
+          console.log('Phone:', phoneNumber);
         }
       } else {
         console.log('No clinic found, skipping appointment creation');

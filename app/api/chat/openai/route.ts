@@ -22,6 +22,8 @@ export async function POST(request: NextRequest) {
 
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      maxRetries: 2,
+      timeout: 30000,
     });
 
     const { messages, conversationState, appointmentData, patientPhone, sessionId } = await request.json();
@@ -91,10 +93,24 @@ NEVER skip confirmation steps! Always confirm before making changes.`;
     const lastUserMessage = messages[messages.length - 1]?.content?.toLowerCase() || '';
     let intent = 'none';
     
-    if (lastUserMessage.includes('book') || lastUserMessage.includes('schedule') || lastUserMessage.includes('appointment')) {
+    // Check if user is confirming a booking (has all required data + confirmation words)
+    const hasAllBookingData = appointmentData?.patientName && 
+                              appointmentData?.phoneNumber && 
+                              appointmentData?.appointmentDate && 
+                              appointmentData?.appointmentTime;
+
+    const isConfirmingBooking = (lastUserMessage.includes('yes') || 
+                                 lastUserMessage.includes('confirm') || 
+                                 lastUserMessage.includes('correct') ||
+                                 lastUserMessage.includes('ok') ||
+                                 lastUserMessage.includes('sure') ||
+                                 lastUserMessage.includes('plz') ||
+                                 lastUserMessage.includes('please')) && hasAllBookingData;
+
+    if (isConfirmingBooking) {
+      intent = 'book'; // Treat confirmation as booking action when all data is present
+    } else if (lastUserMessage.includes('book') || lastUserMessage.includes('schedule') || lastUserMessage.includes('appointment')) {
       intent = 'book';
-    } else if (lastUserMessage.includes('confirm')) {
-      intent = 'confirm';
     } else if (lastUserMessage.includes('cancel')) {
       intent = 'cancel';
     } else if (lastUserMessage.includes('reschedule') || lastUserMessage.includes('change')) {
@@ -104,6 +120,13 @@ NEVER skip confirmation steps! Always confirm before making changes.`;
     const supabase = getServiceSupabase();
     let appointmentResult = null;
 
+    console.log('🔍 DEBUG BOOKING:', {
+      lastUserMessage,
+      intent,
+      hasAllBookingData,
+      isConfirmingBooking,
+      appointmentData
+    });
     console.log('Intent detected:', intent);
     console.log('Appointment data:', appointmentData);
     console.log('Has required fields:', {
@@ -327,7 +350,7 @@ NEVER skip confirmation steps! Always confirm before making changes.`;
       }
     } else if (intent === 'confirm' && (appointmentData?.confirmationCode || appointmentData?.phoneNumber)) {
       try {
-        let query = supabase.from(TABLES.APPOINTMENTS).select('*, sanmiguel_patients(*), sanmiguel_clinics(*)');
+        let query = supabase.from(TABLES.APPOINTMENTS).select('*, patients(*), clinics(*)');
         if (appointmentData.confirmationCode) {
           query = query.eq('confirmation_code', appointmentData.confirmationCode.toUpperCase());
         } else if (appointmentData.appointmentId) {
@@ -345,7 +368,7 @@ NEVER skip confirmation steps! Always confirm before making changes.`;
                 confirmed_at: new Date().toISOString(),
               })
               .eq('id', appointment.id)
-              .select('*, sanmiguel_patients(*), sanmiguel_clinics(*)')
+              .select('*, patients(*), clinics(*)')
               .single();
 
             if (updatedAppointment) {
@@ -551,21 +574,35 @@ NEVER skip confirmation steps! Always confirm before making changes.`;
       }
     }
 
+    // If appointment was created, use the confirmation message instead of OpenAI's generic response
+    const finalMessage = appointmentResult?.success 
+      ? appointmentResult.message 
+      : assistantMessage;
+
     return NextResponse.json({
       success: true,
-      message: appointmentResult?.message || assistantMessage,
+      message: finalMessage,
       intent,
       appointmentResult,
     });
+
   } catch (error: any) {
-    console.error('OpenAI API Error:', error);
-    return NextResponse.json(
-      {
+    console.error('Chat API error:', error);
+    
+    // Handle OpenAI rate limit errors specifically
+    if (error.status === 429 || error.code === 'rate_limit_exceeded') {
+      return NextResponse.json({
         success: false,
-        message: 'I apologize, but I\'m having trouble processing your request. Please try again or call us at (415) 555-1000.',
-        error: error.message,
-      },
-      { status: 500 }
-    );
+        message: 'I\'m receiving too many requests right now. Please wait a moment and try again. ⏳',
+        error: 'rate_limit_exceeded',
+        retryAfter: error.headers?.['retry-after'] || 20
+      }, { status: 429 });
+    }
+    
+    return NextResponse.json({
+      success: false,
+      message: 'An error occurred while processing your request. Please try again.',
+      error: error.message
+    }, { status: 500 });
   }
 }

@@ -5,16 +5,16 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholde
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Table names with prefix
+// Table names (without prefix for new database)
 export const TABLES = {
-  CLINICS: 'sanmiguel_clinics',
-  PATIENTS: 'sanmiguel_patients',
-  APPOINTMENTS: 'sanmiguel_appointments',
-  INTERACTIONS: 'sanmiguel_interactions',
-  FAQS: 'sanmiguel_faqs',
-  CANNED_RESPONSES: 'sanmiguel_canned_responses',
-  CALL_LOGS: 'sanmiguel_call_logs',
-  AUDIT_LOGS: 'sanmiguel_audit_logs',
+  CLINICS: 'clinics',
+  PATIENTS: 'patients',
+  APPOINTMENTS: 'appointments',
+  INTERACTIONS: 'interactions',
+  FAQS: 'faqs',
+  CANNED_RESPONSES: 'canned_responses',
+  CALL_LOGS: 'call_logs',
+  AUDIT_LOGS: 'audit_logs',
 } as const;
 
 // Server-side client with service role (for API routes)

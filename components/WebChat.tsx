@@ -55,37 +55,43 @@ export default function WebChat() {
   }, [isOpen]);
 
   const extractAppointmentData = (conversation: Message[]) => {
-    const conversationText = conversation.map(m => m.content).join(' ');
+    // Only extract from USER messages, not assistant messages
+    const userMessages = conversation.filter(m => m.role === 'user');
+    const conversationText = userMessages.map(m => m.content).join(' ');
     const data: any = { ...appointmentData };
 
     // Extract name - more flexible patterns
     const namePatterns = [
-      /(?:my name is|I'm|I am|name)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
-      /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)$/m,
-      /\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/
+      /(?:my name is|I'm|I am|name)\s+([A-Za-z]+(?:\s+[A-Za-z]+)*)/i,
+      /^([A-Za-z]+(?:\s+[A-Za-z]+)+)$/m,
     ];
     
     for (const pattern of namePatterns) {
       const match = conversationText.match(pattern);
-      if (match && !data.patientName && match[1].length > 2) {
+      if (match && !data.patientName && match[1].length > 2 && !match[1].toLowerCase().includes('riley')) {
         data.patientName = match[1].trim();
         break;
       }
     }
 
-    // Extract phone - multiple formats
+    // Extract phone - multiple formats including Pakistani numbers
     const phonePatterns = [
+      /\b(03\d{9})\b/,  // Pakistani mobile: 03xxxxxxxxx
       /\b(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})\b/,
-      /\b(\d{10})\b/,
+      /\b(\d{10,11})\b/,
       /\+1[\s-]?(\d{3})[\s-]?(\d{3})[\s-]?(\d{4})/
     ];
     
     for (const pattern of phonePatterns) {
       const match = conversationText.match(pattern);
       if (match && !data.phoneNumber) {
-        data.phoneNumber = match[1].replace(/[-.\s]/g, '');
-        setPatientPhone(data.phoneNumber);
-        break;
+        const phone = match[1].replace(/[-.\s]/g, '');
+        // Ensure it's a valid phone number (not a date or other number)
+        if (phone.length >= 10) {
+          data.phoneNumber = phone;
+          setPatientPhone(data.phoneNumber);
+          break;
+        }
       }
     }
 
@@ -95,12 +101,7 @@ export default function WebChat() {
       data.email = emailMatch[0];
     }
 
-    // Extract date of birth
-    const dobMatch = conversationText.match(/\b(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/);
-    if (dobMatch && !data.dateOfBirth) {
-      data.dateOfBirth = dobMatch[1];
-    }
-
+    // Extract appointment date first (before DOB to avoid confusion)
     // Extract appointment date - more flexible
     const datePatterns = [
       /\b(\d{4}-\d{2}-\d{2})\b/,
@@ -131,13 +132,19 @@ export default function WebChat() {
     const timePatterns = [
       /\b(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm))\b/,
       /\b(\d{1,2})\s*(?:AM|PM|am|pm)\b/,
-      /\b(\d{1,2}:\d{2})\b/
+      /\b(\d{1,2})\s*pm\b/i,
+      /\b(\d{1,2})\s*am\b/i,
     ];
     
     for (const pattern of timePatterns) {
       const match = conversationText.match(pattern);
       if (match && !data.appointmentTime) {
-        data.appointmentTime = match[1];
+        // If just a number, add PM/AM
+        let time = match[1];
+        if (!/[ap]m/i.test(time)) {
+          time = time + 'pm';  // Default to PM for single digit times
+        }
+        data.appointmentTime = time;
         break;
       }
     }
@@ -157,7 +164,13 @@ export default function WebChat() {
       }
     }
 
-    console.log('Extracted appointment data:', data);
+    console.log('✅ Extracted appointment data:', {
+      patientName: data.patientName || 'MISSING',
+      phoneNumber: data.phoneNumber || 'MISSING',
+      appointmentDate: data.appointmentDate || 'MISSING',
+      appointmentTime: data.appointmentTime || 'MISSING',
+      appointmentType: data.appointmentType || 'MISSING'
+    });
     return data;
   };
 

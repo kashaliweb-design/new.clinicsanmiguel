@@ -1,0 +1,35 @@
+========================================
+TERMINAL LOGS NEEDED - COPY PASTE YEH
+========================================
+
+Jab aap chat mein "yesplz conform" bhejte ho,
+terminal mein YEH messages dikhne chahiye:
+
+COPY PASTE KARO (Ctrl+C):
+========================================
+
+🔍 DEBUG BOOKING: {
+  lastUserMessage: '...',
+  intent: '...',
+  hasAllBookingData: ...,
+  isConfirmingBooking: ...,
+  appointmentData: { ... }
+}
+Intent detected: ...
+Appointment data: ...
+Has required fields: { ... }
+
+[Aur neeche ke messages]
+
+========================================
+
+IMPORTANT:
+- Terminal window mein scroll up karo
+- "yesplz conform" message ke baad ke saare logs
+- Especially:
+  - "🔍 DEBUG BOOKING:"
+  - "Intent detected:"
+  - "✅ Clinic found:" ya "❌ Error"
+  - "✅ Appointment created:" ya "❌ APPOINTMENT INSERT ERROR:"
+
+YEH LOGS MUJHE BHEJO - tab main exact problem dekh sakta hoon!

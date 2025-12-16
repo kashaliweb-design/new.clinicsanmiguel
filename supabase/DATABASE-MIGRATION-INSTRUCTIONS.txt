@@ -1,0 +1,101 @@
+========================================
+DATABASE MIGRATION - SIMPLE INSTRUCTIONS
+========================================
+
+Aapke paas ab CLEAN aur ORGANIZED files hain!
+
+========================================
+ESSENTIAL FILES (Sirf yeh chahiye):
+========================================
+
+1. STEP-BY-STEP-SETUP.sql
+   - Naye database mein tables banane ke liye
+   - Ek ek step run karo
+
+2. CHECK-WHAT-EXISTS.sql
+   - Database mein kya hai check karne ke liye
+   - Pehle yeh run karo
+
+3. EXPORT-DATA-FROM-OLD-DB.sql
+   - Purane database se data export karne ke liye
+   - Old database mein run karo
+
+4. CLEAN-MIGRATION-NEW-DB.sql
+   - Complete setup ek saath (alternative to step-by-step)
+   - Fresh database ke liye
+
+5. FIXED-MIGRATION-FOR-EXISTING-DB.sql
+   - Agar policies already exist error aaye
+   - Existing database fix karne ke liye
+
+6. SIMPLE-DATA-COPY.sql
+   - Multiple migration methods
+   - Backup/restore instructions
+
+7. schema.sql
+   - Original database schema
+   - Reference ke liye
+
+8. seed.sql
+   - Sample data
+   - Testing ke liye
+
+========================================
+MIGRATION STEPS:
+========================================
+
+STEP 1: Check Old Database
+---------------------------
+- Old Supabase mein jao
+- CHECK-WHAT-EXISTS.sql run karo
+- Dekho kitna data hai
+
+STEP 2: Setup New Database
+---------------------------
+- New Supabase mein jao
+- STEP-BY-STEP-SETUP.sql run karo
+- Ya CLEAN-MIGRATION-NEW-DB.sql run karo
+
+STEP 3: Export Data
+-------------------
+- Old database mein EXPORT-DATA-FROM-OLD-DB.sql run karo
+- Results copy karo
+
+STEP 4: Import Data
+-------------------
+- New database mein paste karo
+- Run karo
+
+STEP 5: Verify
+--------------
+- CHECK-WHAT-EXISTS.sql new database mein run karo
+- Data count match karo
+
+========================================
+AGAR ERROR AAYE:
+========================================
+
+Error: "policy already exists"
+Solution: FIXED-MIGRATION-FOR-EXISTING-DB.sql run karo
+
+Error: "table already exists"
+Solution: Pehle DROP karo, phir CREATE karo
+
+Error: "foreign key violation"
+Solution: Pehle parent tables (clinics, patients) import karo
+
+========================================
+TABLES:
+========================================
+1. clinics
+2. patients
+3. appointments
+4. interactions
+5. faqs
+6. canned_responses
+7. call_logs
+8. audit_logs
+
+========================================
+DONE! Ab database migration ready hai.
+========================================

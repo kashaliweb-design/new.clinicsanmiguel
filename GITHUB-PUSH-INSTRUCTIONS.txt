@@ -1,0 +1,105 @@
+========================================
+GITHUB PUSH INSTRUCTIONS
+========================================
+
+✅ Code committed successfully!
+Now push to GitHub for deployment.
+
+========================================
+OPTION 1: PUSH TO EXISTING REPO
+========================================
+
+If you already have a GitHub repository:
+
+1. Add remote (if not added):
+   git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+
+2. Push code:
+   git push -u origin main
+
+   (If branch is 'master', use: git push -u origin master)
+
+========================================
+OPTION 2: CREATE NEW GITHUB REPO
+========================================
+
+STEP 1: Create Repository on GitHub
+1. Go to: https://github.com/new
+2. Repository name: clinica-sanmiguel
+3. Description: Clinica San Miguel AI Chatbot
+4. Privacy: Private (recommended)
+5. DON'T initialize with README
+6. Click "Create repository"
+
+STEP 2: Push Code
+Run these commands:
+
+git remote add origin https://github.com/YOUR_USERNAME/clinica-sanmiguel.git
+git branch -M main
+git push -u origin main
+
+Replace YOUR_USERNAME with your GitHub username.
+
+========================================
+OPTION 3: DEPLOY WITHOUT GITHUB
+========================================
+
+You can deploy directly with Vercel CLI:
+
+vercel
+
+This will deploy without pushing to GitHub.
+
+========================================
+AFTER PUSHING TO GITHUB
+========================================
+
+DEPLOY VIA VERCEL DASHBOARD:
+
+1. Go to: https://vercel.com/new
+2. Click "Import Git Repository"
+3. Select your GitHub repo
+4. Configure:
+   - Framework Preset: Next.js
+   - Build Command: npm run build
+   - Output Directory: .next
+5. Add Environment Variables:
+   - NEXT_PUBLIC_SUPABASE_URL
+   - NEXT_PUBLIC_SUPABASE_ANON_KEY
+   - SUPABASE_SERVICE_ROLE_KEY
+   - OPENAI_API_KEY
+6. Click "Deploy"
+
+========================================
+RECOMMENDED: OPTION 3 (DIRECT DEPLOY)
+========================================
+
+Fastest way to deploy:
+
+1. Run: vercel
+2. Follow prompts
+3. Add environment variables in dashboard
+4. Redeploy: vercel --prod
+
+Your site will be live in minutes!
+
+========================================
+NEXT STEPS
+========================================
+
+After deployment:
+1. Test web chat
+2. Test admin dashboard
+3. Update VAPI webhook URL
+4. Share live URL with users
+
+========================================
+IMPORTANT NOTES
+========================================
+
+✅ .env.local is in .gitignore (safe)
+✅ API keys won't be pushed to GitHub
+✅ Build successful (ready to deploy)
+✅ All fixes applied and committed
+
+You're ready to go live! 🚀

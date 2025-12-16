@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
         .gte('created_at', new Date().toISOString().split('T')[0]),
       supabase
         .from(TABLES.INTERACTIONS)
-        .select('*, patient:sanmiguel_patients(first_name, last_name, phone, date_of_birth)')
+        .select('*, patient:patients(first_name, last_name, phone, date_of_birth)')
         .order('created_at', { ascending: false })
         .limit(10),
     ]);

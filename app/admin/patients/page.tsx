@@ -47,7 +47,7 @@ export default function PatientsPage() {
         {
           event: '*',
           schema: 'public',
-          table: 'sanmiguel_patients',
+          table: 'patients',
         },
         (payload) => {
           console.log('Patient change detected:', payload);

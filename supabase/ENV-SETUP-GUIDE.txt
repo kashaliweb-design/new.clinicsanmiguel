@@ -1,0 +1,154 @@
+========================================
+ENVIRONMENT VARIABLES SETUP GUIDE
+========================================
+Naye Client-Side Database ko Connect karne ke liye
+
+========================================
+STEP 1: Naya Supabase Project Banao
+========================================
+
+1. https://supabase.com par jao
+2. "New Project" click karo
+3. Project details bharo:
+   - Name: "SanMiguel Client DB" (ya koi bhi naam)
+   - Database Password: Strong password rakho (save kar lo)
+   - Region: Apne paas wala select karo
+4. "Create new project" click karo
+5. Wait karo jab tak project ready na ho jaye (2-3 minutes)
+
+========================================
+STEP 2: Database Setup Karo
+========================================
+
+1. Naye project mein "SQL Editor" par jao
+2. "NEW-CLIENT-DATABASE-SETUP.sql" file open karo
+3. Poori file copy karo
+4. SQL Editor mein paste karo
+5. "RUN" button click karo
+6. Wait karo - saare tables ban jayenge
+7. Success messages dekho:
+   ✅ Extensions enabled!
+   ✅ All tables created!
+   ✅ All indexes created!
+   ✅ RLS enabled!
+   ✅ All policies created!
+   ✅ Database is ready!
+
+========================================
+STEP 3: API Keys Nikalo
+========================================
+
+1. Naye project mein "Settings" par jao
+2. "API" section click karo
+3. Yeh details copy karo:
+
+   a) Project URL:
+      - "Project URL" ke neeche URL copy karo
+      - Example: https://xxxxxxxxxxxxx.supabase.co
+
+   b) Anon/Public Key:
+      - "Project API keys" section mein
+      - "anon" "public" key copy karo
+      - Yeh client-side ke liye safe hai
+
+   c) Service Role Key:
+      - "service_role" key copy karo
+      - ⚠️ Yeh SECRET hai - kabhi client-side use mat karo
+
+========================================
+STEP 4: .env.local File Update Karo
+========================================
+
+Apne project ke root folder mein ".env.local" file open karo
+Yeh lines ADD karo (purani lines ko REPLACE mat karo):
+
+# ========================================
+# NEW CLIENT-SIDE DATABASE (Supabase)
+# ========================================
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4eHh4eHh4eHh4eHh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTk5OTk5OTksImV4cCI6MjAxNTU3NTk5OX0.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Service Role (Backend only - SECRET!)
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4eHh4eHh4eHh4eHh4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY5OTk5OTk5OSwiZXhwIjoyMDE1NTc1OTk5fQ.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+⚠️ IMPORTANT:
+- xxxxxxxxxxxxx ko apne actual values se replace karo
+- NEXT_PUBLIC_ wale variables client-side mein use ho sakte hain
+- SUPABASE_SERVICE_ROLE_KEY ko kabhi client-side expose mat karo
+
+========================================
+STEP 5: Verify Connection
+========================================
+
+1. Development server restart karo:
+   npm run dev
+
+2. Browser console open karo (F12)
+
+3. Koi page open karo jo Supabase use karta hai
+
+4. Console mein errors check karo:
+   - Agar "Invalid API key" error aaye = Keys galat hain
+   - Agar "Failed to fetch" error aaye = URL galat hai
+   - Agar koi error nahi = ✅ Connection successful!
+
+========================================
+EXAMPLE .env.local FILE
+========================================
+
+# Vapi Configuration
+VAPI_API_KEY=your-vapi-key-here
+VAPI_PHONE_NUMBER=your-phone-number
+
+# NEW CLIENT DATABASE (Supabase)
+NEXT_PUBLIC_SUPABASE_URL=https://abcdefghijklmnop.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoyMDE1NTc2MDAwfQ.abcdefghijklmnopqrstuvwxyz1234567890
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNzAwMDAwMDAwLCJleHAiOjIwMTU1NzYwMDB9.zyxwvutsrqponmlkjihgfedcba0987654321
+
+# Other settings...
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+========================================
+TROUBLESHOOTING
+========================================
+
+Problem: "Invalid API key" error
+Solution: 
+- Check karo keys correctly copy hui hain
+- Spaces ya extra characters nahi hone chahiye
+- Quotes (" ") use mat karo .env file mein
+
+Problem: "Failed to fetch" error
+Solution:
+- URL check karo - https:// hona chahiye
+- .supabase.co domain hona chahiye
+- Trailing slash (/) nahi hona chahiye
+
+Problem: Server restart ke baad bhi kaam nahi kar raha
+Solution:
+- .next folder delete karo
+- npm run dev phir se run karo
+- Browser cache clear karo (Ctrl+Shift+Delete)
+
+Problem: RLS policy errors
+Solution:
+- Service role key use kar rahe ho backend mein?
+- Anon key use kar rahe ho client-side mein?
+
+========================================
+SECURITY TIPS
+========================================
+
+✅ DO:
+- NEXT_PUBLIC_ variables ko client-side use karo
+- Service role key ko sirf backend/API routes mein use karo
+- .env.local ko .gitignore mein rakho (already hai)
+
+❌ DON'T:
+- Service role key ko client-side expose mat karo
+- Keys ko code mein hardcode mat karo
+- .env.local ko Git mein commit mat karo
+
+========================================
+DONE! Ab client-side database ready hai!
+========================================

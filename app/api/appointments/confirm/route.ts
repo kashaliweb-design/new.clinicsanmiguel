@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     // Find appointment
     let query = supabase
       .from(TABLES.APPOINTMENTS)
-      .select('*, sanmiguel_patients(*), sanmiguel_clinics(*)');
+      .select('*, patients(*), clinics(*)');
 
     if (confirmationCode) {
       query = query.eq('confirmation_code', confirmationCode.toUpperCase());
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
         confirmed_at: new Date().toISOString(),
       })
       .eq('id', appointment.id)
-      .select('*, sanmiguel_patients(*), sanmiguel_clinics(*)')
+      .select('*, patients(*), clinics(*)')
       .single();
 
     if (updateError) {
