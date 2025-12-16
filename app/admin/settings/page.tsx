@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, TABLES } from '@/lib/supabase';
 import {
   Settings as SettingsIcon,
   Building2,
@@ -40,7 +40,7 @@ export default function SettingsPage() {
   const loadClinics = async () => {
     try {
       const { data, error } = await supabase
-        .from('clinics')
+        .from(TABLES.CLINICS)
         .select('*')
         .order('name', { ascending: true });
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 import { sendSMS, parseTelnyxWebhook } from '@/lib/telnyx';
 import { sendOpenAIChat, createOpenAISystemPrompt, ChatMessage } from '@/lib/openai';
 import { generateSessionId, sanitizeInput } from '@/lib/utils';
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Find or create patient by phone
     let { data: patient } = await supabase
-      .from('patients')
+      .from(TABLES.PATIENTS)
       .select('*')
       .eq('phone', from)
       .single();
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     if (!patient) {
       console.log('Creating new patient from SMS:', from);
       const { data: newPatient } = await supabase
-        .from('patients')
+        .from(TABLES.PATIENTS)
         .insert({
           first_name: 'SMS',
           last_name: 'Patient',
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     // Get clinic info
     const { data: clinics } = await supabase
-      .from('clinics')
+      .from(TABLES.CLINICS)
       .select('*')
       .eq('active', true);
 
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     let appointments = null;
     if (patient) {
       const { data } = await supabase
-        .from('appointments')
+        .from(TABLES.APPOINTMENTS)
         .select('*, clinics(*)')
         .eq('patient_id', patient.id)
         .gte('appointment_date', new Date().toISOString())
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     // Get relevant FAQs
     const language = patient?.preferred_language || 'en';
     const { data: faqs } = await supabase
-      .from('faqs')
+      .from(TABLES.FAQS)
       .select('*')
       .eq('active', true)
       .eq('language', language)
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     const vapiResponse = await sendOpenAIChat(messages);
 
     // Log inbound interaction
-    await supabase.from('interactions').insert({
+    await supabase.from(TABLES.INTERACTIONS).insert({
       session_id: sessionId,
       patient_id: patient?.id || null,
       channel: 'sms',
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log outbound interaction
-    await supabase.from('interactions').insert({
+    await supabase.from(TABLES.INTERACTIONS).insert({
       session_id: sessionId,
       patient_id: patient?.id || null,
       channel: 'sms',

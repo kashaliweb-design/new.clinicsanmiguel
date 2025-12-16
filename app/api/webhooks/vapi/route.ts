@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase, TABLES } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,7 +63,7 @@ async function handleCallStart(supabase: any, data: any) {
     let patientId = null;
     if (phoneNumber && phoneNumber !== 'unknown') {
       const { data: existingPatient } = await supabase
-        .from('patients')
+        .from(TABLES.PATIENTS)
         .select('id')
         .eq('phone', phoneNumber)
         .single();
@@ -74,7 +74,7 @@ async function handleCallStart(supabase: any, data: any) {
       } else {
         // Create placeholder patient record (will be updated at call end with real details)
         const { data: newPatient } = await supabase
-          .from('patients')
+          .from(TABLES.PATIENTS)
           .insert({
             first_name: 'Voice',
             last_name: 'Caller',
@@ -92,7 +92,7 @@ async function handleCallStart(supabase: any, data: any) {
       }
     }
 
-    await supabase.from('interactions').insert({
+    await supabase.from(TABLES.INTERACTIONS).insert({
       session_id: callId,
       patient_id: patientId,
       channel: 'voice',
@@ -122,7 +122,7 @@ async function handleSpeechUpdate(supabase: any, data: any) {
   console.log('Speech update:', transcript);
 
   try {
-    await supabase.from('interactions').insert({
+    await supabase.from(TABLES.INTERACTIONS).insert({
       session_id: callId,
       channel: 'voice',
       direction: message?.role === 'user' ? 'inbound' : 'outbound',
@@ -154,7 +154,7 @@ async function handleConversationUpdate(supabase: any, data: any) {
     const lastMessage = conversation[conversation.length - 1];
     
     try {
-      await supabase.from('interactions').insert({
+      await supabase.from(TABLES.INTERACTIONS).insert({
         session_id: callId,
         channel: 'voice',
         direction: lastMessage?.role === 'user' ? 'inbound' : 'outbound',
@@ -182,7 +182,7 @@ async function handleTranscript(supabase: any, call: any, transcript: any) {
 
   // Log each message in the conversation
   try {
-    await supabase.from('interactions').insert({
+    await supabase.from(TABLES.INTERACTIONS).insert({
       session_id: id, // Use call ID as session ID
       channel: 'voice',
       direction: role === 'user' ? 'inbound' : 'outbound',
@@ -210,7 +210,7 @@ async function handleMessage(supabase: any, call: any, message: any) {
 
   // Log the message
   try {
-    await supabase.from('interactions').insert({
+    await supabase.from(TABLES.INTERACTIONS).insert({
       session_id: id, // Use call ID as session ID
       channel: 'voice',
       direction: role === 'user' ? 'inbound' : 'outbound',
@@ -260,7 +260,7 @@ async function handleCallEnd(supabase: any, data: any) {
     let patientId = null;
     if (phoneNumber && phoneNumber !== 'unknown') {
       const { data: existingPatient } = await supabase
-        .from('patients')
+        .from(TABLES.PATIENTS)
         .select('id')
         .eq('phone', phoneNumber)
         .single();
@@ -278,7 +278,7 @@ async function handleCallEnd(supabase: any, data: any) {
           if (patientInfo.preferred_language) updateData.preferred_language = patientInfo.preferred_language;
           
           await supabase
-            .from('patients')
+            .from(TABLES.PATIENTS)
             .update(updateData)
             .eq('id', patientId);
           
@@ -287,7 +287,7 @@ async function handleCallEnd(supabase: any, data: any) {
       } else {
         // Create new patient with extracted information
         const { data: newPatient } = await supabase
-          .from('patients')
+          .from(TABLES.PATIENTS)
           .insert({
             first_name: patientInfo.first_name || 'Voice',
             last_name: patientInfo.last_name || 'Caller',
@@ -313,7 +313,7 @@ async function handleCallEnd(supabase: any, data: any) {
       : (summary || '');
     const intent = extractIntent(fullText);
 
-    await supabase.from('interactions').insert({
+    await supabase.from(TABLES.INTERACTIONS).insert({
       session_id: callId,
       patient_id: patientId,
       channel: 'voice',
@@ -348,14 +348,14 @@ async function handleCallEnd(supabase: any, data: any) {
 
       // Get first available clinic
       const { data: clinic } = await supabase
-        .from('clinics')
+        .from(TABLES.CLINICS)
         .select('id')
         .limit(1)
         .single();
 
       if (clinic) {
         const { data: appointment, error: appointmentError } = await supabase
-          .from('appointments')
+          .from(TABLES.APPOINTMENTS)
           .insert({
             patient_id: patientId,
             clinic_id: clinic.id,
