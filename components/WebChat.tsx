@@ -62,7 +62,8 @@ export default function WebChat() {
 
     // Extract name - more flexible patterns
     const namePatterns = [
-      /(?:my name is|I'm|I am|name)\s+([A-Za-z]+(?:\s+[A-Za-z]+)*)/i,
+      /name:\s*\(?\s*([A-Za-z]+(?:\s+[A-Za-z]+)*)\s*\)?/i,  // Name: (ali jan) or name: ali jan
+      /(?:my name is|I'm|I am)\s+([A-Za-z]+(?:\s+[A-Za-z]+)*)/i,
       /^([A-Za-z]+(?:\s+[A-Za-z]+)+)$/m,
     ];
     
@@ -104,9 +105,9 @@ export default function WebChat() {
     // Extract appointment date first (before DOB to avoid confusion)
     // Extract appointment date - more flexible
     const datePatterns = [
-      /\b(\d{4}-\d{2}-\d{2})\b/,
-      /\b(\d{1,2}\/\d{1,2}\/\d{4})\b/,
-      /\b(\d{1,2}-\d{1,2}-\d{4})\b/,
+      /\b(\d{1,2}\/\d{1,2}\/\d{4})\b/,  // MM/DD/YYYY - prioritize this format
+      /\b(\d{4}-\d{2}-\d{2})\b/,         // YYYY-MM-DD
+      /\b(\d{1,2}-\d{1,2}-\d{4})\b/,     // MM-DD-YYYY
       /(tomorrow|today)/i,
       /(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i,
       /(\d{1,2})\s*(january|february|march|april|may|june|july|august|september|october|november|december)/i
@@ -122,7 +123,22 @@ export default function WebChat() {
           tomorrow.setDate(tomorrow.getDate() + 1);
           data.appointmentDate = tomorrow.toISOString().split('T')[0];
         } else {
-          data.appointmentDate = match[1];
+          // Convert MM/DD/YYYY or MM-DD-YYYY to YYYY-MM-DD
+          const dateStr = match[1];
+          if (dateStr.includes('/') || (dateStr.includes('-') && !dateStr.startsWith('20'))) {
+            const parts = dateStr.split(/[/-]/);
+            if (parts.length === 3) {
+              const month = parts[0].padStart(2, '0');
+              const day = parts[1].padStart(2, '0');
+              const year = parts[2];
+              data.appointmentDate = `${year}-${month}-${day}`;
+            } else {
+              data.appointmentDate = dateStr;
+            }
+          } else {
+            // Already in YYYY-MM-DD format
+            data.appointmentDate = dateStr;
+          }
         }
         break;
       }
@@ -139,10 +155,19 @@ export default function WebChat() {
     for (const pattern of timePatterns) {
       const match = conversationText.match(pattern);
       if (match && !data.appointmentTime) {
-        // If just a number, add PM/AM
         let time = match[1];
+        // If just a number without minutes, add :00
+        if (!/\d:\d/.test(time)) {
+          const hourMatch = time.match(/(\d{1,2})/);
+          if (hourMatch) {
+            const hour = hourMatch[1];
+            const period = time.match(/[ap]m/i)?.[0] || 'pm';
+            time = `${hour}:00${period}`;
+          }
+        }
+        // Ensure it has AM/PM
         if (!/[ap]m/i.test(time)) {
-          time = time + 'pm';  // Default to PM for single digit times
+          time = time + 'pm';
         }
         data.appointmentTime = time;
         break;
@@ -156,7 +181,12 @@ export default function WebChat() {
     }
 
     // Extract service type
-    const serviceTypes = ['consultation', 'immigration exam', 'physical', 'urgent care', 'specialist', 'checkup', 'exam'];
+    const serviceTypes = [
+      'blood test', 'lab work', 'laboratory', 'x-ray', 'xray', 'ultrasound', 
+      'consultation', 'immigration exam', 'physical', 'urgent care', 
+      'specialist', 'checkup', 'exam', 'vaccination', 'vaccine',
+      'screening', 'test', 'diagnostic'
+    ];
     for (const service of serviceTypes) {
       if (conversationText.toLowerCase().includes(service) && !data.appointmentType) {
         data.appointmentType = service;

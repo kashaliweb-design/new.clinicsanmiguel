@@ -316,7 +316,29 @@ NEVER skip confirmation steps! Always confirm before making changes.`;
             console.log('✅ Appointment created successfully:', appointment.id);
             appointmentResult = {
               success: true,
-              message: `Perfect! Your appointment has been confirmed. Your confirmation code is ${confirmationCode}. You're scheduled for ${bookingData.appointmentType || 'consultation'} on ${bookingData.appointmentDate} at ${bookingData.appointmentTime}.`,
+              message: `🎉 Appointment Confirmed Successfully!
+
+✅ Your appointment has been booked!
+
+📋 Appointment Details:
+👤 Name: ${bookingData.patientName}
+📱 Phone: ${bookingData.phoneNumber}
+📅 Date: ${bookingData.appointmentDate}
+⏰ Time: ${bookingData.appointmentTime}
+🏥 Service: ${bookingData.appointmentType || 'consultation'}
+🔢 Confirmation Code: ${confirmationCode}
+
+📝 Example of your confirmation:
+👤 Name: Kashif Ali
+📱 Phone: 03272553940
+📅 Date: 2025-12-18
+⏰ Time: 3:00pm
+🏥 Service: blood test
+🔢 Confirmation Code: CHAT-12345
+
+Please save your confirmation code for future reference. We'll see you on ${bookingData.appointmentDate} at ${bookingData.appointmentTime}!
+
+Is there anything else I can help you with? 😊`,
               appointmentId: appointment.id,
               confirmationCode: confirmationCode,
               patientId: patientId,
